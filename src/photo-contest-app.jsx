@@ -144,6 +144,121 @@ function useFloatingHearts() {
 /* ══════════════════════════ SMALL COMPONENTS ══════════════════════════ */
 const IMP = "Impact,'Arial Narrow',sans-serif";
 
+/* Opens the VIP modal from anywhere (bypasses the auto-popup gates). */
+const openVIP = () => { try { window.dispatchEvent(new Event('open-vip')); } catch (_) {} };
+
+/* ── Sharing + referral tracking ── */
+const SITE_URL = 'https://www.aut0graff.com';
+/* Stable per-visitor id used as their referral code in share links. */
+function myRef() {
+  try {
+    let id = localStorage.getItem('autograff_uid');
+    if (!id) { id = Math.random().toString(36).slice(2, 9); localStorage.setItem('autograff_uid', id); }
+    return id;
+  } catch (_) { return ''; }
+}
+/* Display handle for this visitor on the supporter ledger. */
+function myHandle() {
+  try {
+    let h = localStorage.getItem('autograff_handle');
+    if (!h) { h = 'guest_' + myRef(); localStorage.setItem('autograff_handle', h); }
+    return h;
+  } catch (_) { return 'guest'; }
+}
+/* Record a like: bumps the photo AND this visitor's supporter score. */
+function sendLike(id) {
+  try {
+    fetch('/api/likes', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id, uid: myRef(), name: myHandle() }) });
+  } catch (_) {}
+}
+/* Register presence so lurkers who never like still surface at zero. */
+function pingSeen() {
+  try {
+    fetch('/api/likes', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'seen', uid: myRef(), name: myHandle() }) });
+  } catch (_) {}
+}
+/* Who referred THIS visitor (from ?ref= on first landing), if anyone. */
+function referredBy() { try { return localStorage.getItem('autograff_referred_by') || ''; } catch (_) { return ''; } }
+/* Capture a ?ref= param once, on first landing. */
+function captureRef() {
+  try {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref && !localStorage.getItem('autograff_referred_by')) {
+      localStorage.setItem('autograff_referred_by', ref.slice(0, 40));
+    }
+  } catch (_) {}
+}
+function shareLink() { const r = myRef(); return r ? `${SITE_URL}/?ref=${encodeURIComponent(r)}` : SITE_URL; }
+/* Native share sheet → clipboard → SMS fallback. */
+async function shareAutograff(text) {
+  const url = shareLink();
+  const message = text || 'Check out AUTOGRAFF — Share to Win. iOS app coming soon.';
+  try { if (navigator.share) { await navigator.share({ title: 'AUTOGRAFF', text: message, url }); return; } }
+  catch (_) { return; /* user cancelled */ }
+  try { await navigator.clipboard.writeText(`${message} ${url}`); alert('Link copied — share it anywhere!'); return; } catch (_) {}
+  try { window.location.href = `sms:?&body=${encodeURIComponent(message + ' ' + url)}`; } catch (_) {}
+}
+
+/* Floating "JOIN VIP" pill shown above the NavBar on every non-splash page. */
+function VIPFab() {
+  const [joined, setJoined] = useState(false);
+  useEffect(() => {
+    try { setJoined(!!localStorage.getItem('autograff_vip')); } catch (_) {}
+    const sync = () => { try { setJoined(!!localStorage.getItem('autograff_vip')); } catch (_) {} };
+    window.addEventListener('vip-joined', sync);
+    return () => window.removeEventListener('vip-joined', sync);
+  }, []);
+  return (
+    <button onClick={openVIP} style={{
+      position:'fixed', right:16, zIndex:300,
+      bottom:'calc(72px + env(safe-area-inset-bottom, 0px))',
+      display:'flex', alignItems:'center', gap:7,
+      background:'#000', color:'#fff', border:'1px solid rgba(255,255,255,0.15)',
+      borderRadius:24, padding:'11px 18px', cursor:'pointer',
+      fontFamily:IMP, fontSize:12, letterSpacing:2,
+      boxShadow:'0 6px 22px rgba(0,0,0,0.28)', WebkitTapHighlightColor:'transparent',
+    }}
+      onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
+      onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
+    >
+      <span style={{ fontSize:13 }}>{joined ? '\u2713' : '\u2605'}</span>
+      {joined ? 'VIP LIST' : 'JOIN VIP'}
+    </button>
+  );
+}
+
+/* App Store "coming soon" band — launch framing + VIP CTA. */
+function AppStoreBanner({ style }) {
+  return (
+    <div style={{ background:'#000', color:'#fff', borderRadius:14, padding:'24px 22px', textAlign:'center',
+      backgroundImage:'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 12px)',
+      border:'1px solid rgba(255,255,255,0.08)', ...style }}>
+      <div style={{ fontSize:26, marginBottom:8 }}>{'\uD83D\uDCF1'}</div>
+      <div style={{ fontFamily:IMP, fontSize:10, letterSpacing:5, color:'rgba(255,255,255,0.5)', marginBottom:8 }}>COMING SOON TO iOS</div>
+      <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5.5vw,26px)', letterSpacing:1, lineHeight:1.1, marginBottom:10 }}>THE APP DROPS<br/>ON THE APP STORE</div>
+      <div style={{ fontSize:12.5, lineHeight:1.55, color:'rgba(255,255,255,0.62)', maxWidth:320, margin:'0 auto 18px' }}>
+        AUTOGRAFF is launching on iPhone. Join the VIP list and we{'\u2019'}ll notify you the moment it{'\u2019'}s live {'\u2014'} plus the drop date and first look at the designs.
+      </div>
+      <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
+        <button onClick={openVIP} style={{ padding:'12px 22px', border:'none', borderRadius:10, background:'#fff', color:'#000',
+          fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>{'\u2605'} JOIN THE VIP LIST</button>
+        <button onClick={()=>shareAutograff()} style={{ padding:'12px 20px', borderRadius:10, background:'transparent', color:'#fff',
+          border:'1px solid rgba(255,255,255,0.25)', fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>{'\u2197'} SHARE</button>
+      </div>
+      <div style={{ marginTop:14, display:'inline-flex', alignItems:'center', gap:7, padding:'7px 14px', borderRadius:8,
+        border:'1px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.04)' }}>
+        <span style={{ fontSize:16 }}>{'\uF8FF'}</span>
+        <div style={{ textAlign:'left', lineHeight:1.1 }}>
+          <div style={{ fontSize:8, color:'rgba(255,255,255,0.5)', letterSpacing:1 }}>Coming soon on the</div>
+          <div style={{ fontFamily:IMP, fontSize:13, letterSpacing:1 }}>App Store</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FloatingHearts({ bursts }) {
   return (
     <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:50, overflow:'hidden' }}>
@@ -182,87 +297,67 @@ function PageHeader({ setPage, subtitle, right }) {
 
 /* ── PhotoCard (vertical / portrait) ── */
 function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSpawn }) {
-  const [actions, setActions] = useState({});
   const likes = likeCounts[photo.id] ?? photo.likes;
   const fmtLikes = likes >= 1000 ? (likes/1000).toFixed(1)+'K' : likes;
 
   const handleLike = (e) => {
+    e.stopPropagation();
     const rect = e.currentTarget.closest('[data-card]').getBoundingClientRect();
     onLike(photo.id);
     if (onHeartSpawn) onHeartSpawn(e.clientX - rect.left, e.clientY - rect.top);
   };
+  const handleShare = (e) => {
+    e.stopPropagation();
+    shareAutograff(`Check out "${photo.title}" on AUTOGRAFF — Share to Win.`);
+  };
 
   return (
     <div data-card style={{
-      width:'clamp(260px,42vw,480px)', minHeight:'clamp(240px,38vw,440px)', borderRadius:14, position:'relative', overflow:'hidden',
-      flexShrink:0, cursor:'pointer', transition:'all 0.2s',
-      boxShadow:'0 4px 20px rgba(0,0,0,0.09)',
+      width:'clamp(300px,72vw,760px)', aspectRatio:'3 / 2', borderRadius:4, position:'relative', overflow:'hidden',
+      flexShrink:0, cursor:'pointer', transition:'transform 0.25s, box-shadow 0.25s',
+      boxShadow:'0 6px 30px rgba(0,0,0,0.14)', background:'#111', scrollSnapAlign:'center',
     }}
-      onMouseEnter={e => { e.currentTarget.style.transform='scale(1.02)'; e.currentTarget.style.boxShadow='0 8px 32px rgba(0,0,0,0.16)'; }}
-      onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,0.09)'; }}
+      onMouseEnter={e => { e.currentTarget.style.transform='scale(1.01)'; e.currentTarget.style.boxShadow='0 12px 44px rgba(0,0,0,0.22)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 6px 30px rgba(0,0,0,0.14)'; }}
     >
       {photo.type === 'video'
-        ? <video src={photo.src} autoPlay muted loop playsInline style={{ width:'100%', height:'calc(100% - 40px)', objectFit:'cover' }} />
-        : <img src={photo.src} alt={photo.title} style={{ width:'100%', height:'calc(100% - 40px)', objectFit:'cover' }} />
+        ? <video src={photo.src} autoPlay muted loop playsInline style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+        : <img src={photo.src} alt={photo.title} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
       }
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:'calc(100% - 40px)',
-        background:'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, transparent 30%, transparent 50%, rgba(0,0,0,0.65) 100%)' }} />
+      <div style={{ position:'absolute', inset:0, pointerEvents:'none',
+        background:'linear-gradient(180deg, rgba(0,0,0,0.12) 0%, transparent 22%, transparent 55%, rgba(0,0,0,0.62) 100%)' }} />
       <FloatingHearts bursts={heartBursts || []} />
 
-      {/* Like button + count */}
-      <div style={{ position:'absolute', top:12, left:12, display:'flex', alignItems:'center', gap:6, zIndex:60 }}>
-        <button onClick={handleLike} style={{
-          width:40, height:40, borderRadius:'50%', border:'none',
-          background:'#e53935', cursor:'pointer', fontSize:18, color:'#fff',
-          display:'flex', alignItems:'center', justifyContent:'center', transition:'transform 0.15s',
-          boxShadow:'0 2px 8px rgba(0,0,0,0.2)',
-        }}
-          onMouseDown={e => e.currentTarget.style.transform='scale(1.3)'}
-          onMouseUp={e => e.currentTarget.style.transform='scale(1)'}
-        >{'\u2764\uFE0F'}</button>
-        <span style={{
-          background:'#fff', borderRadius:20, padding:'4px 10px',
-          fontFamily:IMP, fontSize:12, color:'#000', letterSpacing:1,
-          boxShadow:'0 1px 4px rgba(0,0,0,0.1)',
-        }}>{fmtLikes} LIKES</span>
-      </div>
-
       {photo.isUpload && onRemove && (
-        <button onClick={() => onRemove(photo.id)} style={{
+        <button onClick={(e) => { e.stopPropagation(); onRemove(photo.id); }} style={{
           position:'absolute', top:12, right:12, width:26, height:26, borderRadius:'50%',
-          border:'none', background:'rgba(0,0,0,0.5)', color:'#fff', fontSize:13,
+          border:'none', background:'rgba(0,0,0,0.4)', color:'#fff', fontSize:13,
           cursor:'pointer', zIndex:60, display:'flex', alignItems:'center', justifyContent:'center',
         }}>{'\u2715'}</button>
       )}
 
-      <div style={{ position:'absolute', bottom:52, left:14, zIndex:60 }}>
-        <div style={{ fontFamily:IMP, fontSize:15, color:'#fff', fontWeight:700 }}>{photo.title}</div>
-        <div style={{ fontSize:10, color:'rgba(255,255,255,0.6)' }}>@{photo.user}</div>
+      {/* Title + author */}
+      <div style={{ position:'absolute', bottom:16, left:18, right:70, zIndex:60 }}>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(16px,2.4vw,22px)', color:'#fff', fontWeight:700, textShadow:'0 1px 6px rgba(0,0,0,0.5)' }}>{photo.title}</div>
+        <div style={{ fontSize:11, color:'rgba(255,255,255,0.7)', letterSpacing:0.5 }}>@{photo.user}</div>
       </div>
 
-      {/* Bottom action bar — icons above text */}
-      <div style={{
-        position:'absolute', bottom:0, left:0, right:0, display:'flex',
-        borderTop:'1px solid rgba(0,0,0,0.08)', background:'rgba(255,255,255,0.97)', zIndex:60,
-      }}>
-        {[{k:'save',i:'\u2B07\uFE0F',l:'SAVE'},{k:'archive',i:'\uD83D\uDCC2',l:'ARCHIVE'},{k:'share',i:'\u2197\uFE0F',l:'SHARE'},{k:'vault',i:'\uD83D\uDD12',l:'VAULT'}].map(a => (
-          <button key={a.k} onClick={(e) => {
-            e.stopPropagation();
-            if (a.k === 'share') {
-              const msg = encodeURIComponent("Check out this photo on AUTOGRAFF!\n" + window.location.href);
-              window.location.href = `sms:?&body=${msg}`;
-              return;
-            }
-            setActions(p => ({ ...p, [a.k]: !p[a.k] }));
-          }} style={{
-            flex:1, border:'none', padding:'6px 0 5px', cursor:'pointer', transition:'all 0.2s',
-            background: actions[a.k] ? 'rgba(0,0,0,0.06)' : 'transparent',
-            display:'flex', flexDirection:'column', alignItems:'center', gap:1,
-          }}>
-            <span style={{ fontSize:14 }}>{a.i}</span>
-            <span style={{ fontFamily:IMP, fontSize:9, letterSpacing:1, color: actions[a.k] ? '#000' : 'rgba(0,0,0,0.45)' }}>{a.l}</span>
-          </button>
-        ))}
+      {/* Subtle like + share overlays */}
+      <div style={{ position:'absolute', bottom:16, right:16, display:'flex', flexDirection:'column', alignItems:'center', gap:14, zIndex:60 }}>
+        <button onClick={handleLike} title="Like" style={{
+          background:'transparent', border:'none', cursor:'pointer', padding:0,
+          display:'flex', flexDirection:'column', alignItems:'center', gap:2, transition:'transform 0.15s',
+        }}
+          onMouseDown={e => e.currentTarget.style.transform='scale(1.35)'}
+          onMouseUp={e => e.currentTarget.style.transform='scale(1)'}
+        >
+          <span style={{ fontSize:26, filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.5))', lineHeight:1 }}>{'\u2764\uFE0F'}</span>
+          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', letterSpacing:0.5, textShadow:'0 1px 4px rgba(0,0,0,0.6)' }}>{fmtLikes}</span>
+        </button>
+        <button onClick={handleShare} title="Share" style={{
+          background:'transparent', border:'none', cursor:'pointer', padding:0,
+          fontSize:22, color:'#fff', filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.5))', lineHeight:1,
+        }}>{'\u2197\uFE0F'}</button>
       </div>
     </div>
   );
@@ -521,6 +616,16 @@ function SplashPage({ setPage }) {
           onMouseEnter={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';e.currentTarget.style.letterSpacing='8px'}}
           onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#fff';e.currentTarget.style.letterSpacing='6px'}}
         >ENTER</button>
+        <button
+          onClick={openVIP}
+          style={{
+            marginTop:-16, background:'transparent', border:'none', color:'rgba(255,255,255,0.55)',
+            fontFamily:IMP, fontSize:'clamp(10px,2.6vw,12px)', letterSpacing:4, textTransform:'uppercase',
+            cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'color 0.25s',
+          }}
+          onMouseEnter={e=>e.currentTarget.style.color='#fff'}
+          onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.55)'}
+        >{'\u2605'} Join the VIP list {'\u2192'}</button>
       </div>
     </div>
   );
@@ -536,17 +641,23 @@ function PhotosPage({ setPage }) {
   const pauseRef = useRef(false);
   useEffect(() => {
     let active = true;
-    fetch('/api/photos')
-      .then(r => r.ok ? r.json() : { photos: [] })
-      .then(d => {
-        if (!active || !Array.isArray(d.photos) || !d.photos.length) return;
-        const seedIds = new Set(SEED_PHOTOS.map(p => p.id));
-        const uploaded = d.photos.filter(p => p && p.src && !seedIds.has(p.id));
-        if (!uploaded.length) return;
-        setPhotos([...uploaded, ...SEED_PHOTOS]);
-        setLikeCounts(prev => { const m = { ...prev }; uploaded.forEach(p => { if (m[p.id] == null) m[p.id] = p.likes || 0; }); return m; });
-      })
-      .catch(() => {});
+    // Load uploaded photos + shared like counts together, then merge deltas onto baselines.
+    Promise.all([
+      fetch('/api/photos').then(r => r.ok ? r.json() : { photos: [] }).catch(() => ({ photos: [] })),
+      fetch('/api/likes').then(r => r.ok ? r.json() : { likes: {} }).catch(() => ({ likes: {} })),
+    ]).then(([pd, ld]) => {
+      if (!active) return;
+      const seedIds = new Set(SEED_PHOTOS.map(p => p.id));
+      const uploaded = Array.isArray(pd.photos) ? pd.photos.filter(p => p && p.src && !seedIds.has(p.id)) : [];
+      const nextPhotos = uploaded.length ? [...uploaded, ...SEED_PHOTOS] : SEED_PHOTOS;
+      if (uploaded.length) setPhotos(nextPhotos);
+      const deltas = (ld && ld.likes) || {};
+      setLikeCounts(() => {
+        const m = {};
+        nextPhotos.forEach(p => { m[p.id] = (p.likes || 0) + Number(deltas[p.id] || 0); });
+        return m;
+      });
+    });
     return () => { active = false; };
   }, []);
   useEffect(() => {
@@ -558,7 +669,11 @@ function PhotosPage({ setPage }) {
     },100);
     return()=>{clearTimeout(init);cancelAnimationFrame(raf);};
   },[photos]);
-  const handleLike=(id)=>setLikeCounts(p=>({...p,[id]:(p[id]||0)+1}));
+  const handleLike=(id)=>{
+    setLikeCounts(p=>({...p,[id]:(p[id]||0)+1}));
+    // Persist to KV (shared count) + credit the supporter's ledger score.
+    sendLike(id);
+  };
   const handleHeartSpawn=(pid,x,y)=>{
     const h=Array.from({length:5},(_,i)=>({id:Date.now()+i+Math.random(),x:x+(Math.random()-0.5)*44,y:y-10,
       size:13+Math.random()*14,dur:1.1+Math.random()*0.9,emoji:HEART_EMOJIS[Math.floor(Math.random()*HEART_EMOJIS.length)]}));
@@ -570,7 +685,7 @@ function PhotosPage({ setPage }) {
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#fff' }}>
       <PageHeader setPage={setPage} subtitle="SHARE TO WIN" right={
         <div style={{ display:'flex', gap:6 }}>
-          <button onClick={()=>{const msg=encodeURIComponent("Check out AUTOGRAFF!\n"+window.location.href);window.location.href=`sms:?&body=${msg}`;}}
+          <button onClick={()=>shareAutograff()}
             style={{ background:'rgba(0,0,0,0.04)', color:'rgba(0,0,0,0.5)', border:'1px solid rgba(0,0,0,0.1)',
               width:44, height:44, padding:0, borderRadius:8, fontSize:16, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
@@ -583,11 +698,12 @@ function PhotosPage({ setPage }) {
       } />
       <div style={{ padding:'10px clamp(14px,3vw,40px) 0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
         <span style={{ fontSize:10, color:'rgba(0,0,0,0.35)', letterSpacing:2, fontFamily:IMP }}>{'\u2014'} {photos.length} ENTRIES TODAY</span>
-        <span style={{ fontSize:9, color:'rgba(0,0,0,0.25)', letterSpacing:1 }}>Hover to pause {'\u00B7'} Tap {'\u2764\uFE0F'} for hearts</span>
+        <span style={{ fontSize:9, color:'rgba(0,0,0,0.25)', letterSpacing:1 }}>Swipe {'\u00B7'} Tap {'\u2764\uFE0F'} to like {'\u00B7'} {'\u2197\uFE0F'} to share</span>
       </div>
       <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', overflow:'hidden' }}>
         <div ref={scrollRef} onMouseEnter={()=>pauseRef.current=true} onMouseLeave={()=>pauseRef.current=false}
-          style={{ display:'flex', gap:14, overflowX:'scroll', scrollbarWidth:'none', padding:'12px clamp(14px,3vw,40px)' }}>
+          style={{ display:'flex', gap:18, overflowX:'scroll', scrollbarWidth:'none', padding:'16px clamp(14px,4vw,64px)',
+            scrollSnapType:'x proximity', alignItems:'center' }}>
           {displayList.map((p,i)=>(
             <PhotoCard key={`${p.id}-${i}`} photo={p} likeCounts={likeCounts} onLike={handleLike}
               onRemove={id=>setPhotos(ps=>ps.filter(x=>x.id!==id))}
@@ -609,66 +725,149 @@ function PhotosPage({ setPage }) {
 
 /* ── LeaderboardPage ── */
 function LeaderboardPage({ setPage }) {
-  const tabs=['Daily','Monthly','Yearly','All Time'];
-  const [tab,setTab]=useState('Daily');
+  const [view,setView]=useState('photos'); // 'photos' | 'supporters'
   const [voted,setVoted]=useState({});
-  const [voteData,setVoteData]=useState(()=>{
-    const d={};tabs.forEach(t=>{d[t]=SEED_PHOTOS.map(p=>({...p,votes:p.likes+Math.floor(Math.random()*1500)})).sort((a,b)=>b.votes-a.votes);});return d;
-  });
-  const entries=voteData[tab]||[];
+  const [entries,setEntries]=useState(()=>SEED_PHOTOS.map(p=>({...p,votes:p.likes})).sort((a,b)=>b.votes-a.votes));
+  const [supporters,setSupporters]=useState([]);
+  const me=myRef();
+  useEffect(()=>{
+    let active=true;
+    // Rank photos by real likes, and build the supporter ledger from liker scores.
+    Promise.all([
+      fetch('/api/photos').then(r=>r.ok?r.json():{photos:[]}).catch(()=>({photos:[]})),
+      fetch('/api/likes').then(r=>r.ok?r.json():{likes:{},likers:{},names:{}}).catch(()=>({likes:{},likers:{},names:{}})),
+    ]).then(([pd,ld])=>{
+      if(!active) return;
+      const seedIds=new Set(SEED_PHOTOS.map(p=>p.id));
+      const uploaded=Array.isArray(pd.photos)?pd.photos.filter(p=>p&&p.src&&!seedIds.has(p.id)):[];
+      const deltas=(ld&&ld.likes)||{};
+      const all=[...uploaded,...SEED_PHOTOS].map(p=>({...p,votes:(p.likes||0)+Number(deltas[p.id]||0)}));
+      all.sort((a,b)=>b.votes-a.votes);
+      setEntries(all);
+      const scores=(ld&&ld.likers)||{}; const names=(ld&&ld.names)||{};
+      const sup=Object.keys(scores).map(uid=>({uid,score:Number(scores[uid]||0),name:names[uid]||('guest_'+uid)}));
+      sup.sort((a,b)=>b.score-a.score);
+      setSupporters(sup);
+    });
+    return()=>{active=false;};
+  },[]);
   const maxVotes=entries[0]?.votes||1;
   const totalVotes=entries.reduce((s,e)=>s+e.votes,0);
-  const handleVote=(id)=>{const key=tab+'-'+id;if(voted[key])return;setVoted(p=>({...p,[key]:true}));
-    setVoteData(p=>({...p,[tab]:p[tab].map(e=>e.id===id?{...e,votes:e.votes+1}:e).sort((a,b)=>b.votes-a.votes)}));};
+  const maxScore=supporters.reduce((m,s)=>Math.max(m,s.score),1);
+  const totalGiven=supporters.reduce((s,e)=>s+e.score,0);
+  const handleVote=(id)=>{if(voted[id])return;setVoted(p=>({...p,[id]:true}));
+    setEntries(p=>p.map(e=>e.id===id?{...e,votes:e.votes+1}:e).sort((a,b)=>b.votes-a.votes));
+    // A vote is a like — persist + credit the supporter ledger.
+    sendLike(id);
+    setSupporters(p=>{const has=p.some(s=>s.uid===me);
+      const next=has?p.map(s=>s.uid===me?{...s,score:s.score+1}:s):[...p,{uid:me,score:1,name:myHandle()}];
+      return next.sort((a,b)=>b.score-a.score);});};
   const medal=(i)=>i===0?'\uD83E\uDD47':i===1?'\uD83E\uDD48':i===2?'\uD83E\uDD49':`${i+1}`;
   const barColor=(i)=>i===0?'#000':i===1?'rgba(0,0,0,0.45)':i===2?'rgba(0,0,0,0.3)':'rgba(0,0,0,0.12)';
   const fmtV=(v)=>v>=1000?(v/1000).toFixed(1)+'K':v;
+  const stagnant=supporters.filter(s=>s.score===0);
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#fff' }}>
-      <PageHeader setPage={setPage} subtitle="SHARE TO WIN" />
-      <div style={{ display:'flex', gap:4, padding:'8px clamp(14px,3vw,40px) 0', flexShrink:0, overflowX:'auto', scrollbarWidth:'none' }}>
-        {tabs.map(t=>(
-          <button key={t} onClick={()=>setTab(t)} style={{
-            padding:'7px 14px', borderRadius:20, border:'none', cursor:'pointer', flexShrink:0,
-            fontFamily:IMP, fontSize:11, letterSpacing:1,
-            background:tab===t?'#000':'rgba(0,0,0,0.05)', color:tab===t?'#fff':'rgba(0,0,0,0.5)',
-            transition:'all 0.2s' }}>{t}</button>
-        ))}
+      <PageHeader setPage={setPage} subtitle="THE LEDGER" />
+      <div style={{ padding:'6px clamp(14px,3vw,40px) 0', flexShrink:0 }}>
+        <p style={{ fontSize:10, color:'rgba(0,0,0,0.4)', letterSpacing:0.5, margin:'0 0 8px' }}>
+          We support the liker, we like the supporter. Give love to climb — lurk and you sink.
+        </p>
+        <div style={{ display:'flex', gap:6 }}>
+          {[{k:'photos',l:'\uD83D\uDCF8 MOST LIKED'},{k:'supporters',l:'\u2764\uFE0F TOP SUPPORTERS'}].map(t=>(
+            <button key={t.k} onClick={()=>setView(t.k)} style={{
+              flex:1, padding:'9px 10px', borderRadius:20, border:'none', cursor:'pointer',
+              fontFamily:IMP, fontSize:11, letterSpacing:1,
+              background:view===t.k?'#000':'rgba(0,0,0,0.05)', color:view===t.k?'#fff':'rgba(0,0,0,0.5)',
+              transition:'all 0.2s' }}>{t.l}</button>
+          ))}
+        </div>
       </div>
-      <div style={{ flex:1, overflow:'auto', padding:'4px 18px 120px' }}>
-        {entries.map((e,i)=>{
-          const key=tab+'-'+e.id;const pct=Math.round(e.votes/maxVotes*100);
-          return (
-            <div key={e.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
-              <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(0,0,0,0.3)' }}>{medal(i)}</span>
-              <div style={{ width:60, height:44, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
-                <img src={e.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+
+      {view==='photos' ? (
+        <div style={{ flex:1, overflow:'auto', padding:'8px 18px 120px' }}>
+          {entries.map((e,i)=>{
+            const key=e.id;const pct=Math.round(e.votes/maxVotes*100);
+            return (
+              <div key={e.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
+                <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(0,0,0,0.3)' }}>{medal(i)}</span>
+                <div style={{ width:60, height:44, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
+                  <img src={e.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>{e.title}</div>
+                  <div style={{ fontSize:10, color:'rgba(0,0,0,0.4)' }}>@{e.user}</div>
+                  <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
+                    <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
+                  </div>
+                </div>
+                <div style={{ textAlign:'right', minWidth:44 }}>
+                  <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700 }}>{fmtV(e.votes)}</div>
+                  <div style={{ fontSize:8, color:'rgba(0,0,0,0.35)', letterSpacing:2 }}>LIKES</div>
+                </div>
+                <button onClick={()=>handleVote(e.id)} disabled={!!voted[key]} style={{
+                  padding:'6px 12px', borderRadius:8, fontSize:10, cursor:voted[key]?'default':'pointer',
+                  fontFamily:IMP, letterSpacing:1,
+                  background:voted[key]?'rgba(0,0,0,0.06)':'transparent',
+                  border:`1px solid ${voted[key]?'rgba(0,0,0,0.2)':'rgba(0,0,0,0.15)'}`,
+                  color:voted[key]?'rgba(0,0,0,0.4)':'#000' }}>{voted[key]?'\u2713 LIKED':'\u2764\uFE0F LIKE'}</button>
               </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>{e.title}</div>
-                <div style={{ fontSize:10, color:'rgba(0,0,0,0.4)' }}>@{e.user}</div>
-                <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
-                  <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ flex:1, overflow:'auto', padding:'8px 18px 120px' }}>
+          {supporters.filter(s=>s.score>0).length===0 && (
+            <div style={{ textAlign:'center', padding:'40px 20px', color:'rgba(0,0,0,0.35)', fontSize:12 }}>
+              No supporters yet. Be the first to give love — go like some photos.
+            </div>
+          )}
+          {supporters.filter(s=>s.score>0).map((s,i)=>{
+            const pct=Math.round(s.score/maxScore*100); const mine=s.uid===me;
+            return (
+              <div key={s.uid} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
+                <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(0,0,0,0.3)' }}>{medal(i)}</span>
+                <div style={{ width:44, height:44, borderRadius:'50%', flexShrink:0, background:i===0?'#000':'rgba(0,0,0,0.08)',
+                  display:'flex', alignItems:'center', justifyContent:'center', fontFamily:IMP, fontSize:16,
+                  color:i===0?'#fff':'rgba(0,0,0,0.5)' }}>{(s.name||'?').replace(/^guest_/,'').slice(0,2).toUpperCase()}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>@{s.name}{mine&&<span style={{ fontSize:9, color:'#3ad07a', marginLeft:6 }}>YOU</span>}</div>
+                  <div style={{ fontSize:10, color:'rgba(0,0,0,0.4)' }}>{i===0?'Patron of the day':'Supporter'}</div>
+                  <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
+                    <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
+                  </div>
+                </div>
+                <div style={{ textAlign:'right', minWidth:44 }}>
+                  <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700 }}>{fmtV(s.score)}</div>
+                  <div style={{ fontSize:8, color:'rgba(0,0,0,0.35)', letterSpacing:2 }}>GIVEN</div>
                 </div>
               </div>
-              <div style={{ textAlign:'right', minWidth:44 }}>
-                <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700 }}>{fmtV(e.votes)}</div>
-                <div style={{ fontSize:8, color:'rgba(0,0,0,0.35)', letterSpacing:2 }}>VOTES</div>
+            );
+          })}
+          {stagnant.length>0 && (
+            <div style={{ marginTop:18, padding:'14px 16px', borderRadius:12, background:'rgba(229,57,53,0.06)', border:'1px dashed rgba(229,57,53,0.35)' }}>
+              <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:1, color:'#e53935' }}>{'\uD83E\uDD87'} THE STAGNANT ({stagnant.length})</div>
+              <div style={{ fontSize:10, color:'rgba(0,0,0,0.45)', margin:'4px 0 8px' }}>Showed up, watched the show, never gave a like. Zero love. Do better.</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                {stagnant.map(s=>(
+                  <span key={s.uid} style={{ fontSize:10, fontFamily:IMP, letterSpacing:0.5, padding:'4px 8px', borderRadius:14,
+                    background:s.uid===me?'#e53935':'rgba(0,0,0,0.06)', color:s.uid===me?'#fff':'rgba(0,0,0,0.5)' }}>
+                    @{s.name}{s.uid===me?' (YOU 💀)':''}
+                  </span>
+                ))}
               </div>
-              <button onClick={()=>handleVote(e.id)} disabled={!!voted[key]} style={{
-                padding:'6px 12px', borderRadius:8, fontSize:10, cursor:voted[key]?'default':'pointer',
-                fontFamily:IMP, letterSpacing:1,
-                background:voted[key]?'rgba(0,0,0,0.06)':'transparent',
-                border:`1px solid ${voted[key]?'rgba(0,0,0,0.2)':'rgba(0,0,0,0.15)'}`,
-                color:voted[key]?'rgba(0,0,0,0.4)':'#000' }}>{voted[key]?'\u2713 VOTED':'\u25B2 VOTE'}</button>
             </div>
-          );
-        })}
-      </div>
+          )}
+        </div>
+      )}
+
       <div style={{ position:'absolute', bottom:56, left:0, right:0, padding:'20px clamp(14px,3vw,40px) 8px',
         background:'linear-gradient(transparent, rgba(255,255,255,0.95) 30%, #fff)',
         display:'flex', justifyContent:'space-around', zIndex:10 }}>
-        {[{l:'TOTAL VOTES',v:fmtV(totalVotes)},{l:'LEADER',v:entries[0]?.title||'-'},{l:'TOP USER',v:entries[0]?'@'+entries[0].user:'-'}].map(s=>(
+        {(view==='photos'
+          ? [{l:'TOTAL LIKES',v:fmtV(totalVotes)},{l:'TOP PHOTO',v:entries[0]?.title||'-'},{l:'BY',v:entries[0]?'@'+entries[0].user:'-'}]
+          : [{l:'LOVE GIVEN',v:fmtV(totalGiven)},{l:'TOP PATRON',v:supporters[0]?'@'+supporters[0].name:'-'},{l:'STAGNANT',v:stagnant.length}]
+        ).map(s=>(
           <div key={s.l} style={{ textAlign:'center' }}>
             <div style={{ fontSize:8, color:'rgba(0,0,0,0.35)', letterSpacing:2, fontFamily:IMP }}>{s.l}</div>
             <div style={{ fontFamily:IMP, fontSize:13, marginTop:2 }}>{s.v}</div>
@@ -750,6 +949,8 @@ function GuestPage({ setPage }) {
         <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'rgba(0,0,0,0.4)' }}>{'\u2014'} {'\u2B50'} TOP RATED</div>
         <ScrollRow photos={[...SEED_PHOTOS.slice(3),...SEED_PHOTOS.slice(0,3)]} speed={1.4} rowHeight={140} cardWidth={200} />
       </div>
+      {/* App Store coming soon */}
+      <AppStoreBanner style={{ margin:'20px clamp(14px,3vw,40px) 0' }} />
       {/* Join CTA */}
       <div style={{ margin:'20px clamp(14px,3vw,40px) 100px', background:'#000', borderRadius:14, padding:'26px 22px',
         backgroundImage:'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 12px)',
@@ -1205,7 +1406,7 @@ function VIPModal({ onClose, onJoin }) {
     if (!valid) { setErrMsg('Enter a valid email to join.'); return; }
     setSubmitting(true);
     setErrMsg('');
-    const payload = { name, email, phone, social, bio };
+    const payload = { name, email, phone, social, bio, ref: referredBy() };
     try {
       const res = await fetch('/api/vip', {
         method: 'POST',
@@ -1290,17 +1491,28 @@ export default function App() {
   const joinedRef = useRef(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    captureRef();
+    pingSeen(); // register presence so lurkers surface on the ledger at zero
     if (localStorage.getItem('autograff_vip') || localStorage.getItem('autograff_vip_dismissed')) return;
     const timer = setTimeout(() => setShowVIP(true), 3000);
     const onExit = (e) => { if (e.clientY <= 0) setShowVIP(true); };
     document.addEventListener('mouseleave', onExit);
     return () => { clearTimeout(timer); document.removeEventListener('mouseleave', onExit); };
   }, []);
+  useEffect(() => {
+    // Manual opens (JOIN VIP button) always work, even after dismiss/join.
+    const manual = () => setShowVIP(true);
+    window.addEventListener('open-vip', manual);
+    return () => window.removeEventListener('open-vip', manual);
+  }, []);
   const closeVIP = () => {
     setShowVIP(false);
     if (!joinedRef.current && typeof window !== 'undefined') localStorage.setItem('autograff_vip_dismissed', '1');
   };
-  const joinVIP = () => { joinedRef.current = true; try { localStorage.setItem('autograff_vip', '1'); } catch (_) {} };
+  const joinVIP = () => {
+    joinedRef.current = true;
+    try { localStorage.setItem('autograff_vip', '1'); window.dispatchEvent(new Event('vip-joined')); } catch (_) {}
+  };
   return (
     <div style={{ width:'100vw', height:'100vh', background:'#fff', overflow:'hidden', position:'relative', color:'#000' }}>
       {page==='splash'      && <SplashPage setPage={setPage} />}
@@ -1311,6 +1523,7 @@ export default function App() {
       {page==='studio'       && <StudioPage setPage={setPage} />}
       {page==='profile'      && <ProfilePage setPage={setPage} />}
       {page!=='splash'       && <NavBar page={page} setPage={setPage} />}
+      {page!=='splash'       && <VIPFab />}
       {showVIP && <VIPModal onClose={closeVIP} onJoin={joinVIP} />}
     </div>
   );

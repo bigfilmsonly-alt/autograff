@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>AUTOGRAFF · Admin</title>
+<style>
+  :root {
+    --ink: #111;
+    --muted: #999;
+    --line: #e5e5e5;
+    --line-strong: #111;
+    --bg: #fff;
+    --accent: #e53935;
+    --imp: Impact, "Arial Narrow", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  h1, h2, h3, .imp {
+    font-family: var(--imp);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: normal;
+    margin: 0;
+  }
+  button {
+    font-family: var(--imp);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 13px;
+    background: #fff;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    line-height: 1;
+  }
+  button:hover { background: var(--ink); color: #fff; }
+  button.primary { background: var(--ink); color: #fff; }
+  button.primary:hover { background: #333; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  input[type="password"], input[type="text"] {
+    font-family: Georgia, serif;
+    font-size: 16px;
+    padding: 12px 14px;
+    border: 2px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    width: 100%;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  .hidden { display: none !important; }
+
+  /* Unlock screen */
+  #unlock {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 380px;
+    border: 2px solid var(--ink);
+    padding: 34px 30px;
+    text-align: center;
+  }
+  .card h1 { font-size: 30px; margin-bottom: 6px; }
+  .card .sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 26px;
+    letter-spacing: 0.04em;
+  }
+  .field-label {
+    font-family: var(--imp);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 12px;
+    display: block;
+    text-align: left;
+    margin-bottom: 8px;
+    color: #555;
+  }
+  #unlockBtn { width: 100%; margin-top: 16px; padding: 14px; }
+  .err {
+    color: var(--accent);
+    font-size: 13px;
+    margin-top: 14px;
+    min-height: 18px;
+    font-family: Georgia, serif;
+  }
+
+  /* Dashboard */
+  #dash { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px;
+    margin-bottom: 26px;
+  }
+  .topbar h1 { font-size: 26px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .countbox { margin: 8px 0 26px; }
+  .countbox .num {
+    font-family: var(--imp);
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .countbox .lbl {
+    font-family: var(--imp);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    border: 2px solid var(--ink);
+    -webkit-overflow-scrolling: touch;
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+  thead th {
+    font-family: var(--imp);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    text-align: left;
+    padding: 12px 14px;
+    background: var(--ink);
+    color: #fff;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  tbody td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) td { background: #fafafa; }
+  td.idx { color: var(--muted); font-family: var(--imp); letter-spacing: 0.05em; }
+  td.email a { color: var(--ink); }
+  td.bio { max-width: 300px; }
+  td.bio .biotext {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+  }
+  .nowrap { white-space: nowrap; }
+  .muted { color: var(--muted); }
+  .state {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+  }
+  .banner {
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  @media (max-width: 560px) {
+    .topbar h1 { font-size: 21px; }
+    .countbox .num { font-size: 48px; }
+    .actions button { padding: 9px 12px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- UNLOCK SCREEN -->
+  <section id="unlock">
+    <div class="card">
+      <h1>AUTOGRAFF</h1>
+      <div class="sub">Admin · VIP List</div>
+      <label class="field-label" for="keyInput">Admin Key</label>
+      <input type="password" id="keyInput" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <button id="unlockBtn" class="primary">Unlock</button>
+      <div class="err" id="unlockErr"></div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dash" class="hidden">
+    <div class="topbar">
+      <h1>AUTOGRAFF · VIP List</h1>
+      <div class="actions">
+        <button id="refreshBtn">Refresh</button>
+        <button id="exportBtn">Export CSV</button>
+        <button id="lockBtn">Lock</button>
+      </div>
+    </div>
+
+    <div id="banner" class="banner hidden"></div>
+
+    <div class="countbox">
+      <div class="num" id="countNum">0</div>
+      <div class="lbl">Total Signups</div>
+    </div>
+
+    <div id="body"></div>
+  </section>
+
+<script>
+(function () {
+  "use strict";
+
+  var SKEY = "autograff_admin_key";
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var els = {
+    unlock: $("unlock"),
+    dash: $("dash"),
+    keyInput: $("keyInput"),
+    unlockBtn: $("unlockBtn"),
+    unlockErr: $("unlockErr"),
+    refreshBtn: $("refreshBtn"),
+    exportBtn: $("exportBtn"),
+    lockBtn: $("lockBtn"),
+    banner: $("banner"),
+    countNum: $("countNum"),
+    body: $("body")
+  };
+
+  var state = { signups: [] };
+
+  function getKey() {
+    try { return sessionStorage.getItem(SKEY); } catch (e) { return null; }
+  }
+  function setKey(k) {
+    try { sessionStorage.setItem(SKEY, k); } catch (e) {}
+  }
+  function clearKey() {
+    try { sessionStorage.removeItem(SKEY); } catch (e) {}
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // Cell value or muted dash
+  function cell(v) {
+    if (v == null || String(v).trim() === "") {
+      return '<span class="muted">&mdash;</span>';
+    }
+    return esc(v);
+  }
+
+  function fmtDate(ts) {
+    var n = Number(ts);
+    if (!ts || isNaN(n)) return '<span class="muted">&mdash;</span>';
+    var d = new Date(n);
+    if (isNaN(d.getTime())) return '<span class="muted">&mdash;</span>';
+    try {
+      return esc(d.toLocaleString(undefined, {
+        year: "numeric", month: "short", day: "numeric",
+        hour: "numeric", minute: "2-digit"
+      }));
+    } catch (e) {
+      return esc(d.toString());
+    }
+  }
+
+  // ---- Fetch ----
+  function fetchList(key) {
+    return fetch("/api/vip?key=" + encodeURIComponent(key), {
+      headers: { "Accept": "application/json" },
+      cache: "no-store"
+    }).then(function (res) {
+      if (res.status === 401) {
+        var e = new Error("unauthorized");
+        e.unauthorized = true;
+        throw e;
+      }
+      if (!res.ok) {
+        throw new Error("Request failed (" + res.status + ")");
+      }
+      return res.json();
+    });
+  }
+
+  // ---- Unlock flow ----
+  function attemptUnlock() {
+    var key = els.keyInput.value.trim();
+    els.unlockErr.textContent = "";
+    if (!key) {
+      els.unlockErr.textContent = "Enter a key";
+      return;
+    }
+    els.unlockBtn.disabled = true;
+    els.unlockBtn.textContent = "Checking...";
+    fetchList(key).then(function (data) {
+      setKey(key);
+      els.keyInput.value = "";
+      showDash();
+      applyData(data);
+    }).catch(function (err) {
+      if (err && err.unauthorized) {
+        els.unlockErr.textContent = "Invalid key";
+      } else {
+        els.unlockErr.textContent = "Network error. Try again.";
+      }
+      els.keyInput.value = "";
+    }).then(function () {
+      els.unlockBtn.disabled = false;
+      els.unlockBtn.textContent = "Unlock";
+    });
+  }
+
+  function showUnlock() {
+    els.dash.classList.add("hidden");
+    els.unlock.classList.remove("hidden");
+    els.unlockErr.textContent = "";
+    els.keyInput.value = "";
+    els.keyInput.focus();
+  }
+
+  function showDash() {
+    els.unlock.classList.add("hidden");
+    els.dash.classList.remove("hidden");
+  }
+
+  function showBanner(msg) {
+    els.banner.textContent = msg;
+    els.banner.classList.remove("hidden");
+  }
+  function hideBanner() {
+    els.banner.classList.add("hidden");
+    els.banner.textContent = "";
+  }
+
+  // ---- Render dashboard data ----
+  function applyData(data) {
+    hideBanner();
+    var signups = (data && Array.isArray(data.signups)) ? data.signups : [];
+    state.signups = signups;
+    var count = (data && typeof data.count === "number") ? data.count : signups.length;
+    els.countNum.textContent = String(count);
+    renderTable(signups);
+  }
+
+  function renderTable(signups) {
+    if (!signups.length) {
+      els.body.innerHTML = '<div class="state">No signups yet.</div>';
+      return;
+    }
+    var rows = signups.map(function (s, i) {
+      s = s || {};
+      var emailCell;
+      if (s.email && String(s.email).trim() !== "") {
+        emailCell = '<a href="mailto:' + esc(s.email) + '">' + esc(s.email) + "</a>";
+      } else {
+        emailCell = '<span class="muted">&mdash;</span>';
+      }
+      var bio = (s.bio == null || String(s.bio).trim() === "")
+        ? '<span class="muted">&mdash;</span>'
+        : '<span class="biotext">' + esc(s.bio) + "</span>";
+      return "<tr>" +
+        '<td class="idx">' + (i + 1) + "</td>" +
+        "<td>" + cell(s.name) + "</td>" +
+        '<td class="email">' + emailCell + "</td>" +
+        '<td class="nowrap">' + cell(s.phone) + "</td>" +
+        "<td>" + cell(s.social) + "</td>" +
+        '<td class="bio">' + bio + "</td>" +
+        '<td class="nowrap">' + fmtDate(s.ts) + "</td>" +
+      "</tr>";
+    }).join("");
+
+    els.body.innerHTML =
+      '<div class="table-wrap"><table>' +
+        "<thead><tr>" +
+          "<th>#</th><th>Name</th><th>Email</th><th>Phone</th>" +
+          "<th>Social</th><th>Bio</th><th>Joined</th>" +
+        "</tr></thead>" +
+        "<tbody>" + rows + "</tbody>" +
+      "</table></div>";
+  }
+
+  // ---- Refresh ----
+  function refresh() {
+    var key = getKey();
+    if (!key) { showUnlock(); return; }
+    els.refreshBtn.disabled = true;
+    els.refreshBtn.textContent = "Loading...";
+    fetchList(key).then(function (data) {
+      applyData(data);
+    }).catch(function (err) {
+      if (err && err.unauthorized) {
+        clearKey();
+        showUnlock();
+        els.unlockErr.textContent = "Session expired. Re-enter key.";
+      } else {
+        showBanner("Network error. Could not load signups.");
+      }
+    }).then(function () {
+      els.refreshBtn.disabled = false;
+      els.refreshBtn.textContent = "Refresh";
+    });
+  }
+
+  // ---- CSV export ----
+  function csvField(v) {
+    var s = (v == null) ? "" : String(v);
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function exportCSV() {
+    var headers = ["#", "Name", "Email", "Phone", "Social", "Bio", "Joined"];
+    var lines = [headers.map(csvField).join(",")];
+    state.signups.forEach(function (s, i) {
+      s = s || {};
+      var joined = "";
+      var n = Number(s.ts);
+      if (s.ts && !isNaN(n)) {
+        var d = new Date(n);
+        if (!isNaN(d.getTime())) joined = d.toLocaleString();
+      }
+      lines.push([
+        csvField(i + 1),
+        csvField(s.name),
+        csvField(s.email),
+        csvField(s.phone),
+        csvField(s.social),
+        csvField(s.bio),
+        csvField(joined)
+      ].join(","));
+    });
+    var csv = lines.join("\r\n");
+    var blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var d = new Date();
+    var pad = function (x) { return String(x).padStart(2, "0"); };
+    var date = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "autograff-vip-" + date + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function lock() {
+    clearKey();
+    state.signups = [];
+    els.body.innerHTML = "";
+    els.countNum.textContent = "0";
+    showUnlock();
+  }
+
+  // ---- Wire up events ----
+  els.unlockBtn.addEventListener("click", attemptUnlock);
+  els.keyInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") attemptUnlock();
+  });
+  els.refreshBtn.addEventListener("click", refresh);
+  els.exportBtn.addEventListener("click", exportCSV);
+  els.lockBtn.addEventListener("click", lock);
+
+  // ---- Init ----
+  if (getKey()) {
+    showDash();
+    refresh();
+  } else {
+    showUnlock();
+  }
+})();
+</script>
+</body>
+</html>
