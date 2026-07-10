@@ -172,6 +172,10 @@ function sendLike(id) {
       body: JSON.stringify({ id, uid: myRef(), name: myHandle() }) });
   } catch (_) {}
 }
+/* Per-visitor set of photo ids they've already liked (Instagram-style filled heart persists). */
+function likedSet() { try { return new Set(JSON.parse(localStorage.getItem('autograff_liked') || '[]')); } catch (_) { return new Set(); } }
+function hasLiked(id) { return likedSet().has(String(id)); }
+function markLiked(id) { try { const s = likedSet(); s.add(String(id)); localStorage.setItem('autograff_liked', JSON.stringify([...s])); } catch (_) {} }
 /* Register presence so lurkers who never like still surface at zero. */
 function pingSeen() {
   try {
@@ -295,13 +299,28 @@ function PageHeader({ setPage, subtitle, right }) {
   );
 }
 
+/* Instagram-style heart: outline until liked, then filled red. */
+function HeartIcon({ filled, size = 26 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display:'block', filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.55))', transition:'transform 0.2s' }}
+      fill={filled ? '#e53935' : 'none'} stroke={filled ? '#e53935' : '#fff'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  );
+}
+
 /* ── PhotoCard (vertical / portrait) ── */
 function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSpawn }) {
+  const [liked, setLiked] = useState(() => hasLiked(photo.id));
+  const [pop, setPop] = useState(false);
   const likes = likeCounts[photo.id] ?? photo.likes;
   const fmtLikes = likes >= 1000 ? (likes/1000).toFixed(1)+'K' : likes;
 
   const handleLike = (e) => {
     e.stopPropagation();
+    setPop(true); setTimeout(() => setPop(false), 220);
+    if (liked) return; // one like per photo, Instagram-style
+    setLiked(true); markLiked(photo.id);
     const rect = e.currentTarget.closest('[data-card]').getBoundingClientRect();
     onLike(photo.id);
     if (onHeartSpawn) onHeartSpawn(e.clientX - rect.left, e.clientY - rect.top);
@@ -315,7 +334,7 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
     <div data-card style={{
       width:'clamp(300px,72vw,760px)', aspectRatio:'3 / 2', borderRadius:4, position:'relative', overflow:'hidden',
       flexShrink:0, cursor:'pointer', transition:'transform 0.25s, box-shadow 0.25s',
-      boxShadow:'0 6px 30px rgba(0,0,0,0.14)', background:'#111', scrollSnapAlign:'center',
+      boxShadow:'0 6px 30px rgba(0,0,0,0.14)', background:'#111',
     }}
       onMouseEnter={e => { e.currentTarget.style.transform='scale(1.01)'; e.currentTarget.style.boxShadow='0 12px 44px rgba(0,0,0,0.22)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='0 6px 30px rgba(0,0,0,0.14)'; }}
@@ -344,14 +363,13 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
 
       {/* Subtle like + share overlays */}
       <div style={{ position:'absolute', bottom:16, right:16, display:'flex', flexDirection:'column', alignItems:'center', gap:14, zIndex:60 }}>
-        <button onClick={handleLike} title="Like" style={{
+        <button onClick={handleLike} title={liked ? 'Liked' : 'Like'} style={{
           background:'transparent', border:'none', cursor:'pointer', padding:0,
-          display:'flex', flexDirection:'column', alignItems:'center', gap:2, transition:'transform 0.15s',
-        }}
-          onMouseDown={e => e.currentTarget.style.transform='scale(1.35)'}
-          onMouseUp={e => e.currentTarget.style.transform='scale(1)'}
-        >
-          <span style={{ fontSize:26, filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.5))', lineHeight:1 }}>{'\u2764\uFE0F'}</span>
+          display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+        }}>
+          <span style={{ display:'block', transform: pop ? 'scale(1.35)' : 'scale(1)', transition:'transform 0.2s cubic-bezier(0.2,1.6,0.4,1)' }}>
+            <HeartIcon filled={liked} />
+          </span>
           <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', letterSpacing:0.5, textShadow:'0 1px 4px rgba(0,0,0,0.6)' }}>{fmtLikes}</span>
         </button>
         <button onClick={handleShare} title="Share" style={{
@@ -661,10 +679,19 @@ function PhotosPage({ setPage }) {
     return () => { active = false; };
   }, []);
   useEffect(() => {
-    const el=scrollRef.current; if(!el) return; let raf;
+    const el=scrollRef.current; if(!el) return; let raf; let last=0; let pos=0;
+    const SPEED=42; // px/second — steady conveyor-belt glide
     const init=setTimeout(()=>{
-      el.scrollLeft=el.scrollWidth/3;
-      function step(){if(!pauseRef.current){el.scrollLeft-=1.0;if(el.scrollLeft<=1)el.scrollLeft=el.scrollWidth/3;}raf=requestAnimationFrame(step);}
+      el.scrollLeft=el.scrollWidth/3; pos=el.scrollLeft;
+      function step(t){
+        if(!last) last=t; const dt=Math.min((t-last)/1000,0.05); last=t;
+        if(!pauseRef.current){
+          pos-=SPEED*dt;
+          if(pos<=1){pos+=el.scrollWidth/3;}
+          el.scrollLeft=pos;
+        } else { pos=el.scrollLeft; }
+        raf=requestAnimationFrame(step);
+      }
       raf=requestAnimationFrame(step);
     },100);
     return()=>{clearTimeout(init);cancelAnimationFrame(raf);};
@@ -703,7 +730,7 @@ function PhotosPage({ setPage }) {
       <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', overflow:'hidden' }}>
         <div ref={scrollRef} onMouseEnter={()=>pauseRef.current=true} onMouseLeave={()=>pauseRef.current=false}
           style={{ display:'flex', gap:18, overflowX:'scroll', scrollbarWidth:'none', padding:'16px clamp(14px,4vw,64px)',
-            scrollSnapType:'x proximity', alignItems:'center' }}>
+            alignItems:'center' }}>
           {displayList.map((p,i)=>(
             <PhotoCard key={`${p.id}-${i}`} photo={p} likeCounts={likeCounts} onLike={handleLike}
               onRemove={id=>setPhotos(ps=>ps.filter(x=>x.id!==id))}
