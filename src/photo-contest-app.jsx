@@ -85,44 +85,119 @@ const NAV_ITEMS = [
   { key:'profile',     label:'YOU',      icon:'\uD83D\uDC64' },
 ];
 
+/* FL-Studio-style channel rack. `sound` selects the synthesis voice in playSound. */
 const TRACK_DEFS = [
-  { id:1, name:'KICK',   emoji:'\uD83E\uDD41', color:'#000', freq:80,  type:'sine',     attack:0.001, decay:0.18, vol:0.9  },
-  { id:2, name:'SNARE',  emoji:'\uD83D\uDD34', color:'#c00', freq:200, type:'noise',    attack:0.001, decay:0.12, vol:0.7  },
-  { id:3, name:'HI-HAT', emoji:'\u26A1',        color:'#555', freq:800, type:'noise',    attack:0.001, decay:0.04, vol:0.5  },
-  { id:4, name:'BASS',   emoji:'\uD83C\uDFB8', color:'#333', freq:55,  type:'sawtooth', attack:0.01,  decay:0.35, vol:0.8  },
-  { id:5, name:'SYNTH',  emoji:'\uD83C\uDFB9', color:'#444', freq:440, type:'square',   attack:0.02,  decay:0.28, vol:0.6  },
-  { id:6, name:'PERC',   emoji:'\uD83E\uDD41', color:'#666', freq:180, type:'triangle', attack:0.001, decay:0.22, vol:0.65 },
+  { id:1,  name:'KICK',     emoji:'\uD83E\uDD41', color:'#000',    sound:'kick',    freq:150, decay:0.28, vol:0.95 },
+  { id:7,  name:'808',      emoji:'\uD83D\uDD0A', color:'#7c3aed', sound:'sub808',  freq:55,  decay:0.70, vol:0.9  },
+  { id:2,  name:'SNARE',    emoji:'\uD83D\uDD34', color:'#e11d48', sound:'snare',   freq:190, decay:0.18, vol:0.75 },
+  { id:8,  name:'CLAP',     emoji:'\uD83D\uDC4F', color:'#f43f5e', sound:'clap',    freq:1500,decay:0.20, vol:0.7  },
+  { id:3,  name:'HI-HAT',   emoji:'\u26A1',        color:'#0891b2', sound:'hat',     freq:9000,decay:0.045,vol:0.5  },
+  { id:9,  name:'OPEN HAT', emoji:'\uD83D\uDD25', color:'#06b6d4', sound:'openhat', freq:8000,decay:0.32, vol:0.45 },
+  { id:4,  name:'BASS',     emoji:'\uD83C\uDFB8', color:'#334155', sound:'bass',    freq:55,  decay:0.35, vol:0.8  },
+  { id:5,  name:'SYNTH',    emoji:'\uD83C\uDFB9', color:'#2563eb', sound:'synth',   freq:440, decay:0.28, vol:0.6  },
+  { id:10, name:'LEAD',     emoji:'\uD83C\uDFBA', color:'#16a34a', sound:'lead',    freq:660, decay:0.30, vol:0.55 },
+  { id:6,  name:'PERC',     emoji:'\uD83E\uDD41', color:'#a16207', sound:'perc',    freq:320, decay:0.20, vol:0.65 },
+  { id:11, name:'TOM',      emoji:'\uD83E\uDD41', color:'#b45309', sound:'tom',     freq:160, decay:0.32, vol:0.7  },
+  { id:12, name:'RIM',      emoji:'\uD83D\uDCCC', color:'#78716c', sound:'rim',     freq:1700,decay:0.05, vol:0.6  },
+  { id:13, name:'COWBELL',  emoji:'\uD83D\uDD14', color:'#ca8a04', sound:'cowbell', freq:560, decay:0.25, vol:0.55 },
+  { id:14, name:'CRASH',    emoji:'\uD83D\uDCA5', color:'#0e7490', sound:'crash',   freq:6000,decay:1.10, vol:0.4  },
 ];
 
 const PRESETS = {
-  'HOUSE BEAT': { bpm:124, swing:0, patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0], 5:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 6:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }},
-  'HIP HOP': { bpm:90, swing:45, patterns:{ 1:[1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1], 3:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,0], 4:[1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0], 5:[0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0], 6:[0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0] }},
-  'TRAP': { bpm:140, swing:20, patterns:{ 1:[1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 4:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 5:[0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0], 6:[0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1] }},
+  'HOUSE BEAT': { bpm:124, swing:0, patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0], 9:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0] }},
+  'HIP HOP': { bpm:90, swing:45, patterns:{ 1:[1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1], 3:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,0], 4:[1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0], 6:[0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0] }},
+  'TRAP': { bpm:140, swing:20, patterns:{ 1:[1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 7:[1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] }},
+  'DRILL': { bpm:142, swing:12, patterns:{ 1:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1], 7:[1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] }},
+  'AFROBEAT': { bpm:108, swing:18, patterns:{ 1:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 6:[0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0], 13:[0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0], 4:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0] }},
 };
 
 /* ══════════════════════════ AUDIO ENGINE ══════════════════════════ */
-function playSound(ctx, track, time, vol) {
+function noiseBuffer(ctx, dur) {
+  const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return buf;
+}
+function env(ctx, dest, time, attack, decay, peak) {
   const g = ctx.createGain();
-  g.connect(ctx.destination);
-  g.gain.setValueAtTime(0, time);
-  g.gain.linearRampToValueAtTime(vol * track.vol, time + track.attack);
-  g.gain.exponentialRampToValueAtTime(0.001, time + track.attack + track.decay);
-  if (track.type === 'noise') {
-    const len = ctx.sampleRate * (track.decay + track.attack);
-    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filt = ctx.createBiquadFilter();
-    filt.type = track.freq > 500 ? 'highpass' : 'bandpass';
-    filt.frequency.value = track.freq > 500 ? 6000 : track.freq;
-    if (track.freq <= 500) filt.Q.value = 1;
-    src.connect(filt); filt.connect(g); src.start(time); src.stop(time + track.attack + track.decay);
-  } else {
-    const osc = ctx.createOscillator(); osc.type = track.type;
-    osc.frequency.setValueAtTime(track.freq, time);
-    if (track.name === 'KICK') osc.frequency.exponentialRampToValueAtTime(30, time + track.decay);
-    osc.connect(g); osc.start(time); osc.stop(time + track.attack + track.decay + 0.01);
+  g.connect(dest);
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.linearRampToValueAtTime(peak, time + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + attack + decay);
+  return g;
+}
+function tone(ctx, dest, type, f0, f1, time, attack, decay, peak) {
+  const g = env(ctx, dest, time, attack, decay, peak);
+  const osc = ctx.createOscillator(); osc.type = type;
+  osc.frequency.setValueAtTime(f0, time);
+  if (f1 && f1 !== f0) osc.frequency.exponentialRampToValueAtTime(f1, time + attack + decay);
+  osc.connect(g); osc.start(time); osc.stop(time + attack + decay + 0.02);
+  return osc;
+}
+function noise(ctx, dest, filterType, freq, q, time, attack, decay, peak) {
+  const g = env(ctx, dest, time, attack, decay, peak);
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, attack + decay + 0.02);
+  const filt = ctx.createBiquadFilter();
+  filt.type = filterType; filt.frequency.value = freq; if (q) filt.Q.value = q;
+  src.connect(filt); filt.connect(g); src.start(time); src.stop(time + attack + decay + 0.02);
+}
+function playSound(ctx, track, time, vol) {
+  const out = ctx.destination;
+  const v = (vol ?? 1) * (track.vol ?? 0.8);
+  switch (track.sound) {
+    case 'kick':
+      tone(ctx, out, 'sine', track.freq, 40, time, 0.001, track.decay, v);
+      noise(ctx, out, 'lowpass', 1200, 0, time, 0.001, 0.02, v * 0.4); // beater click
+      break;
+    case 'sub808':
+      tone(ctx, out, 'sine', track.freq * 2.4, track.freq, time, 0.001, 0.05, v); // pitch drop
+      tone(ctx, out, 'sine', track.freq, track.freq * 0.9, time, 0.01, track.decay, v);
+      break;
+    case 'snare':
+      tone(ctx, out, 'triangle', track.freq, track.freq * 0.7, time, 0.001, track.decay * 0.6, v * 0.5); // body
+      noise(ctx, out, 'highpass', 1800, 0, time, 0.001, track.decay, v * 0.9); // crack
+      break;
+    case 'clap': {
+      const bursts = [0, 0.012, 0.024, 0.05];
+      bursts.forEach((o, i) => noise(ctx, out, 'bandpass', track.freq, 1.2, time + o, 0.001, i === 3 ? track.decay : 0.03, v * (i === 3 ? 1 : 0.7)));
+      break;
+    }
+    case 'hat':
+      noise(ctx, out, 'highpass', track.freq, 0, time, 0.001, track.decay, v);
+      break;
+    case 'openhat':
+      noise(ctx, out, 'highpass', track.freq, 0, time, 0.001, track.decay, v);
+      break;
+    case 'bass':
+      tone(ctx, out, 'sawtooth', track.freq, track.freq, time, 0.01, track.decay, v);
+      break;
+    case 'synth':
+      tone(ctx, out, 'square', track.freq, track.freq, time, 0.02, track.decay, v * 0.9);
+      tone(ctx, out, 'square', track.freq * 1.5, track.freq * 1.5, time, 0.02, track.decay, v * 0.4); // fifth
+      break;
+    case 'lead':
+      tone(ctx, out, 'sawtooth', track.freq, track.freq, time, 0.01, track.decay, v);
+      break;
+    case 'perc':
+      tone(ctx, out, 'triangle', track.freq, track.freq * 0.6, time, 0.001, track.decay, v);
+      break;
+    case 'tom':
+      tone(ctx, out, 'sine', track.freq, track.freq * 0.55, time, 0.001, track.decay, v);
+      break;
+    case 'rim':
+      tone(ctx, out, 'square', track.freq, track.freq, time, 0.001, track.decay, v * 0.7);
+      noise(ctx, out, 'bandpass', track.freq, 2, time, 0.001, track.decay, v * 0.6);
+      break;
+    case 'cowbell':
+      tone(ctx, out, 'square', 540, 540, time, 0.001, track.decay, v * 0.6);
+      tone(ctx, out, 'square', 800, 800, time, 0.001, track.decay, v * 0.5);
+      break;
+    case 'crash':
+      noise(ctx, out, 'highpass', track.freq, 0, time, 0.001, track.decay, v);
+      break;
+    default:
+      tone(ctx, out, 'sine', track.freq, track.freq, time, 0.005, track.decay, v);
   }
 }
 
@@ -1175,49 +1250,52 @@ function StudioPage({ setPage }) {
         ))}
       </div>
       {/* Beat numbers */}
-      <div style={{ padding:'0 clamp(14px,3vw,40px)', display:'flex', flexShrink:0 }}>
-        <div style={{ width:75, flexShrink:0 }} />
-        <div style={{ flex:1, display:'flex' }}>
-          {[1,2,3,4].map(n=>(
-            <div key={n} style={{ flex:1, textAlign:'center', fontFamily:IMP, fontSize:10, color:'rgba(0,0,0,0.25)', letterSpacing:1 }}>{n}</div>
+      <div style={{ padding:'4px clamp(14px,3vw,40px) 2px', display:'flex', flexShrink:0, gap:6 }}>
+        <div style={{ width:106, flexShrink:0 }} />
+        <div style={{ flex:1, display:'flex', gap:3 }}>
+          {Array.from({length:16},(_,i)=>(
+            <div key={i} style={{ flex:1, textAlign:'center', fontFamily:IMP, fontSize:10,
+              color:i%4===0?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.18)', letterSpacing:1 }}>{i%4===0?(i/4)+1:'\u00B7'}</div>
           ))}
         </div>
-        <div style={{ width:135, flexShrink:0 }} />
+        <div style={{ width:150, flexShrink:0 }} />
       </div>
-      {/* Step grid — one row per track */}
-      <div style={{ flex:1, overflow:'auto', padding:'0 clamp(14px,3vw,40px) 100px' }}>
+      {/* Step grid — one row per track, stretches to fill the page */}
+      <div style={{ flex:1, overflow:'auto', padding:'2px clamp(14px,3vw,40px) 92px', display:'flex', flexDirection:'column', gap:6 }}>
         {TRACK_DEFS.map(track=>(
-          <div key={track.id} style={{ display:'flex', alignItems:'center', gap:4, marginBottom:4 }}>
+          <div key={track.id} style={{ display:'flex', alignItems:'stretch', gap:6, flex:'1 1 0', minHeight:42 }}>
             {/* Label */}
-            <div style={{ width:75, flexShrink:0, display:'flex', alignItems:'center', gap:3 }}>
-              <span style={{ fontSize:12 }}>{track.emoji}</span>
-              <span style={{ fontFamily:IMP, fontSize:9, letterSpacing:1, lineHeight:1 }}>{track.name}</span>
+            <div style={{ width:106, flexShrink:0, display:'flex', alignItems:'center', gap:6, padding:'0 4px',
+              borderLeft:`4px solid ${track.color}`, borderRadius:4, background:'rgba(0,0,0,0.02)' }}>
+              <span style={{ fontSize:16 }}>{track.emoji}</span>
+              <span style={{ fontFamily:IMP, fontSize:11, letterSpacing:1, lineHeight:1.05 }}>{track.name}</span>
             </div>
             {/* 16 step buttons */}
-            <div style={{ flex:1, display:'flex', gap:2 }}>
+            <div style={{ flex:1, display:'flex', gap:3, alignItems:'stretch' }}>
               {(patterns[track.id]||[]).map((on,i)=>(
                 <button key={i} onClick={()=>setPatterns(p=>({...p,[track.id]:p[track.id].map((v,j)=>j===i?!v:v)}))} style={{
-                  height:28, flex:1, minWidth:0, borderRadius:3, border:'none', cursor:'pointer', transition:'all 0.1s',
-                  background: currentStep===i&&playing ? (on?'#fff':'rgba(255,255,255,0.9)') : on?track.color:(i%4===0?'rgba(0,0,0,0.06)':'rgba(0,0,0,0.03)'),
+                  flex:1, minWidth:0, minHeight:34, borderRadius:5, border:'none', cursor:'pointer', transition:'all 0.08s',
+                  background: currentStep===i&&playing ? (on?'#fff':'rgba(255,255,255,0.9)') : on?track.color:(i%4===0?'rgba(0,0,0,0.07)':'rgba(0,0,0,0.035)'),
+                  boxShadow: on ? `0 2px 8px ${track.color}55` : 'none',
                   outline: currentStep===i&&playing ? `2px solid ${track.color}` : 'none',
                   opacity: muted[track.id]?0.35:1,
                 }} />
               ))}
             </div>
             {/* Controls: vol + M + S + dice + × */}
-            <div style={{ width:135, flexShrink:0, display:'flex', alignItems:'center', gap:3 }}>
+            <div style={{ width:150, flexShrink:0, display:'flex', alignItems:'center', gap:4 }}>
               <input type="range" min="0" max="100" value={Math.round((volumes[track.id]??track.vol)*100)}
-                onChange={e=>setVolumes(p=>({...p,[track.id]:e.target.value/100}))} style={{ width:50, flexShrink:0 }} />
+                onChange={e=>setVolumes(p=>({...p,[track.id]:e.target.value/100}))} style={{ width:52, flexShrink:0 }} />
               <button onClick={()=>setMuted(p=>({...p,[track.id]:!p[track.id]}))} style={{
-                width:26, height:26, borderRadius:4, border:'1px solid rgba(0,0,0,0.1)', fontSize:9, cursor:'pointer',
+                width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:11, cursor:'pointer',
                 fontFamily:IMP, background:muted[track.id]?'#c00':'#fff', color:muted[track.id]?'#fff':'rgba(0,0,0,0.4)' }}>M</button>
               <button onClick={()=>setSolo(p=>p===track.id?null:track.id)} style={{
-                width:26, height:26, borderRadius:4, border:'1px solid rgba(0,0,0,0.1)', fontSize:9, cursor:'pointer',
+                width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:11, cursor:'pointer',
                 fontFamily:IMP, background:solo===track.id?'#f90':'#fff', color:solo===track.id?'#fff':'rgba(0,0,0,0.4)' }}>S</button>
               <button onClick={()=>setPatterns(p=>({...p,[track.id]:p[track.id].map(()=>Math.random()>0.65)}))}
-                style={{ width:26, height:26, borderRadius:4, border:'1px solid rgba(0,0,0,0.1)', fontSize:11, cursor:'pointer', background:'#fff' }}>{'\uD83C\uDFB2'}</button>
+                style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:13, cursor:'pointer', background:'#fff' }}>{'\uD83C\uDFB2'}</button>
               <button onClick={()=>setPatterns(p=>({...p,[track.id]:new Array(16).fill(false)}))}
-                style={{ width:26, height:26, borderRadius:4, border:'1px solid rgba(0,0,0,0.1)', fontSize:10, cursor:'pointer', background:'#fff', color:'rgba(0,0,0,0.3)' }}>{'\u2715'}</button>
+                style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:12, cursor:'pointer', background:'#fff', color:'rgba(0,0,0,0.3)' }}>{'\u2715'}</button>
             </div>
           </div>
         ))}
