@@ -103,12 +103,24 @@ const TRACK_DEFS = [
   { id:14, name:'CRASH',    emoji:'\uD83D\uDCA5', color:'#0e7490', sound:'crash',   freq:6000,decay:1.10, vol:0.4  },
 ];
 
+/* Genre templates tuned to recognizable, high-engagement grooves.
+   Track ids: 1 KICK 2 SNARE 3 HIHAT 4 BASS 5 SYNTH 6 PERC 7 808 8 CLAP 9 OPENHAT 10 LEAD 11 TOM 12 RIM 13 COWBELL 14 CRASH */
 const PRESETS = {
-  'HOUSE BEAT': { bpm:124, swing:0, patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0], 9:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0] }},
-  'HIP HOP': { bpm:90, swing:45, patterns:{ 1:[1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1], 3:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,0], 4:[1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0], 6:[0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0] }},
-  'TRAP': { bpm:140, swing:20, patterns:{ 1:[1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], 7:[1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] }},
-  'DRILL': { bpm:142, swing:12, patterns:{ 1:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1], 7:[1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] }},
-  'AFROBEAT': { bpm:108, swing:18, patterns:{ 1:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 6:[0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0], 13:[0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0], 4:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0] }},
+  'TRAP':        { bpm:140, swing:16, patterns:{ 1:[1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], 7:[1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] }},
+  'DRILL':       { bpm:142, swing:10, patterns:{ 1:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,1], 7:[1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0] }},
+  'PHONK':       { bpm:135, swing:0,  patterns:{ 1:[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,1], 7:[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0], 13:[1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0] }},
+  'HIP HOP':     { bpm:90,  swing:42, patterns:{ 1:[1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0], 6:[0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0] }},
+  'BOOM BAP':    { bpm:88,  swing:32, patterns:{ 1:[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0], 14:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }},
+  'REGGAETON':   { bpm:96,  swing:0,  patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 8:[0,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 13:[0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0], 4:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0] }},
+  'AMAPIANO':    { bpm:112, swing:22, patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 4:[0,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0], 3:[0,0,1,0,0,1,0,1,0,0,1,0,0,1,0,1], 12:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0], 6:[0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1] }},
+  'AFROBEAT':    { bpm:108, swing:18, patterns:{ 1:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 6:[0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0], 13:[0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0], 4:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0] }},
+  'HOUSE BEAT':  { bpm:124, swing:0,  patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 9:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0] }},
+  'DANCE POP':   { bpm:124, swing:0,  patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 9:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 14:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }},
+  'TECHNO':      { bpm:128, swing:0,  patterns:{ 1:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], 9:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 5:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0] }},
+  'UK GARAGE':   { bpm:132, swing:42, patterns:{ 1:[1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], 9:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0], 4:[1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0] }},
+  'DNB':         { bpm:172, swing:0,  patterns:{ 1:[1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0], 2:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,1,0,1,1,0,1,0,1,1,0,1,1,0], 4:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], 9:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0] }},
+  'JERSEY CLUB': { bpm:140, swing:0,  patterns:{ 1:[1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0], 8:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 13:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1], 2:[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0] }},
+  'LOFI':        { bpm:78,  swing:34, patterns:{ 1:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], 12:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], 3:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], 4:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0], 6:[0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0] }},
 };
 
 /* ══════════════════════════ AUDIO ENGINE ══════════════════════════ */
@@ -1160,6 +1172,7 @@ function StudioPage({ setPage }) {
   const [saved,setSaved]=useState([]);
   const [showSave,setShowSave]=useState(false);
   const [saveName,setSaveName]=useState('');
+  const [activePreset,setActivePreset]=useState(null);
   const [currentStep,setCurrentStep]=useState(-1);
   const ctxRef=useRef(null); const timerRef=useRef(null); const stepRef=useRef(0);
   const nextTimeRef=useRef(0); const bpmRef=useRef(bpm); const patRef=useRef(patterns);
@@ -1192,8 +1205,14 @@ function StudioPage({ setPage }) {
   useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current);},[]);
   const loadPreset=(name)=>{const pr=PRESETS[name];if(!pr)return;stop();
     const p={};TRACK_DEFS.forEach(t=>p[t.id]=(pr.patterns[t.id]||new Array(16).fill(0)).map(v=>!!v));
-    setPatterns(p);setBpm(pr.bpm);setSwing(pr.swing);};
-  const clearAll=()=>{stop();const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));setPatterns(p);};
+    // Sync refs synchronously so the scheduler plays the new beat immediately.
+    setPatterns(p); patRef.current=p;
+    setBpm(pr.bpm); bpmRef.current=pr.bpm;
+    setSwing(pr.swing); swingRef.current=pr.swing;
+    setActivePreset(name);
+    start(); // clicking a preset is a user gesture, so audio can start out loud
+  };
+  const clearAll=()=>{stop();setActivePreset(null);const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));setPatterns(p);};
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#fff' }}>
       <PageHeader setPage={setPage} subtitle="STUDIO \u00B7 LOOP MIXER" right={
@@ -1217,12 +1236,27 @@ function StudioPage({ setPage }) {
         <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'rgba(0,0,0,0.4)', marginLeft:6 }}>SWING</span>
         <input type="range" min="0" max="80" value={swing} onChange={e=>setSwing(Number(e.target.value))} style={{ width:60 }} />
         <span style={{ fontFamily:IMP, fontSize:11 }}>{swing}%</span>
-        <div style={{ display:'flex', gap:4, marginLeft:'auto' }}>
-          {Object.keys(PRESETS).map(n=>(
-            <button key={n} onClick={()=>loadPreset(n)} style={{
-              padding:'4px 10px', borderRadius:6, border:'1px solid rgba(0,0,0,0.12)',
-              background:'#fff', fontSize:9, cursor:'pointer', fontFamily:IMP, letterSpacing:1 }}>{n}</button>
-          ))}
+      </div>
+      {/* Genre presets — tap to load & auto-play out loud */}
+      <div style={{ padding:'8px clamp(14px,3vw,40px)', flexShrink:0, borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+          <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'rgba(0,0,0,0.4)' }}>{'\uD83C\uDFB5'} GENRE PRESETS</span>
+          <span style={{ fontSize:9, color:'rgba(0,0,0,0.3)', letterSpacing:1 }}>Tap a genre — it plays instantly {'\u25B6'}</span>
+        </div>
+        <div style={{ display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2 }}>
+          {Object.keys(PRESETS).map(n=>{
+            const on=activePreset===n&&playing;
+            return (
+              <button key={n} onClick={()=>loadPreset(n)} style={{
+                flexShrink:0, padding:'8px 14px', borderRadius:20, cursor:'pointer',
+                border:on?'1px solid #000':'1px solid rgba(0,0,0,0.12)',
+                background:on?'#000':'#fff', color:on?'#fff':'#000',
+                fontSize:10, fontFamily:IMP, letterSpacing:1, whiteSpace:'nowrap',
+                display:'flex', alignItems:'center', gap:5, transition:'all 0.15s' }}>
+                <span style={{ fontSize:9, color:on?'#4fc3f7':'rgba(0,0,0,0.35)' }}>{on?'\u25B6':'\u25B7'}</span>{n}
+              </button>
+            );
+          })}
         </div>
       </div>
       {/* Save button */}
