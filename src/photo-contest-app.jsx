@@ -28,6 +28,22 @@ if (typeof document !== 'undefined') {
       -webkit-appearance:none; width:16px; height:16px; background:#fff; border:2px solid #000;
       border-radius:50%; cursor:pointer;
     }
+    /* Phone rotated to landscape. Tests "short viewport", not device class:
+       (min-width:769px) would also match a landscape iPhone (844px wide), and a
+       bare (orientation:landscape) would also match every desktop window. */
+    @media (orientation: landscape) and (max-height: 460px) {
+      /* Duplicates the "+ UPLOAD" button already in the header, at a cost of 174px
+         — 45% of a 390px-tall viewport. */
+      .pc-cta { display: none !important; }
+      /* Clear the fixed NavBar the .pc-cta padding used to clear. Same env()
+         expression as the NavBar itself so the two can never drift apart. */
+      .pc-shelf { padding-bottom: calc(58px + max(14px, env(safe-area-inset-bottom, 14px))); }
+      /* min-height:0 is load-bearing: a flex item defaults to min-height:auto and
+         would refuse to shrink below its content, silently defeating the stretch. */
+      .pc-scroller { flex: 1 1 auto; min-height: 0; align-items: stretch !important; }
+      /* Height now comes from the stretched flex line; aspect-ratio derives width. */
+      .pc-card { width: auto !important; }
+    }
   `;
   document.head.appendChild(_s);
 }
@@ -418,7 +434,7 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
   };
 
   return (
-    <div data-card style={{
+    <div data-card className="pc-card" style={{
       width:'clamp(300px,72vw,760px)', aspectRatio:'3 / 2', borderRadius:4, position:'relative', overflow:'hidden',
       flexShrink:0, cursor:'pointer', transition:'transform 0.25s, box-shadow 0.25s',
       boxShadow:'0 6px 30px rgba(0,0,0,0.14)', background:'#111',
@@ -509,7 +525,7 @@ function UploadModal({ onClose, onUpload }) {
   };
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:18, width:360, maxWidth:'92vw', padding:22, position:'relative' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:18, width:360, maxWidth:'92vw', maxHeight:'calc(100dvh - 32px)', overflowY:'auto', padding:22, position:'relative' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
           <span style={{ fontFamily:IMP, fontSize:15, letterSpacing:2 }}>ADD PHOTO / VIDEO</span>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer' }}>{'\u2715'}</button>
@@ -566,7 +582,9 @@ function UploadModal({ onClose, onUpload }) {
 
 /* ── ScrollRow ── */
 function ScrollRow({ photos, speed = 0.9, rowHeight: rh = 160, cardWidth: cw = 260, likeCounts = {} }) {
-  const isWide = typeof window !== 'undefined' && window.innerWidth > 768;
+  // Width alone can't mean "desktop": a landscape phone is wide AND short, and would
+  // otherwise get the 1.3x upsize on the shortest viewport we support.
+  const isWide = typeof window !== 'undefined' && window.innerWidth > 768 && window.innerHeight > 600;
   const cardWidth = isWide ? Math.round(cw * 1.3) : cw;
   const rowHeight = isWide ? Math.round(rh * 1.3) : rh;
   const ref = useRef(null);
@@ -814,8 +832,8 @@ function PhotosPage({ setPage }) {
         <span style={{ fontSize:10, color:'rgba(0,0,0,0.35)', letterSpacing:2, fontFamily:IMP }}>{'\u2014'} {photos.length} ENTRIES TODAY</span>
         <span style={{ fontSize:9, color:'rgba(0,0,0,0.25)', letterSpacing:1 }}>Swipe {'\u00B7'} Tap {'\u2764\uFE0F'} to like {'\u00B7'} {'\u2197\uFE0F'} to share</span>
       </div>
-      <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', overflow:'hidden' }}>
-        <div ref={scrollRef} onMouseEnter={()=>pauseRef.current=true} onMouseLeave={()=>pauseRef.current=false}
+      <div className="pc-shelf" style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', overflow:'hidden' }}>
+        <div ref={scrollRef} className="pc-scroller" onMouseEnter={()=>pauseRef.current=true} onMouseLeave={()=>pauseRef.current=false}
           style={{ display:'flex', gap:18, overflowX:'scroll', scrollbarWidth:'none', padding:'16px clamp(14px,4vw,64px)',
             alignItems:'center' }}>
           {displayList.map((p,i)=>(
@@ -825,7 +843,7 @@ function PhotosPage({ setPage }) {
           ))}
         </div>
       </div>
-      <div style={{ padding:'16px clamp(14px,3vw,40px) 80px', display:'flex', flexDirection:'column', alignItems:'center', gap:10, flexShrink:0 }}>
+      <div className="pc-cta" style={{ padding:'16px clamp(14px,3vw,40px) 80px', display:'flex', flexDirection:'column', alignItems:'center', gap:10, flexShrink:0 }}>
         <div onClick={()=>setShowModal(true)} style={{
           width:56, height:56, borderRadius:'50%', border:'2px dashed rgba(0,0,0,0.15)',
           display:'flex', alignItems:'center', justifyContent:'center', fontSize:22,
@@ -1652,8 +1670,11 @@ export default function App() {
     joinedRef.current = true;
     try { localStorage.setItem('autograff_vip', '1'); window.dispatchEvent(new Event('vip-joined')); } catch (_) {}
   };
+  // 100% (not 100vh) because html/body/#root above are already height:100% and resolve
+  // to the truly visible area — 100vh would overshoot by the height of iOS Safari's URL
+  // bar, and #root's overflow:hidden would clip the difference away unreachably.
   return (
-    <div style={{ width:'100vw', height:'100vh', background:'#fff', overflow:'hidden', position:'relative', color:'#000' }}>
+    <div style={{ width:'100%', height:'100%', background:'#fff', overflow:'hidden', position:'relative', color:'#000' }}>
       {page==='splash'      && <SplashPage setPage={setPage} />}
       {page==='guest'        && <GuestPage setPage={setPage} />}
       {page==='photos'       && <PhotosPage setPage={setPage} />}
