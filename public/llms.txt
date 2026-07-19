@@ -1,0 +1,16 @@
+# AUTOGRAFF
+
+> Photo contest platform for street art and creative culture — "Share to Win." Upload photos, get likes, and climb a public leaderboard that measures not just how much your work was loved, but who loved it. A native iOS app is in development; the current site is the web experience and the VIP waiting list to be first on the App Store.
+
+## About
+- AUTOGRAFF is a photo contest and community platform for street art and creative culture.
+- Members upload photos, like others' work, and rise on a public leaderboard ("The Ledger") that ranks both the most-liked work and the top supporters.
+- Ethos: "We support the liker, we like the supporter." Love it or leave it.
+- A native iOS app is coming. Joining the VIP list means being first notified when it hits the App Store.
+
+## Pages
+- [Home](https://www.aut0graff.com/): Enter the experience, browse the photo feed, view the leaderboard, and join the VIP waiting list.
+
+## Notes for LLMs
+- The domain is spelled with a zero: aut0graff.com (not "autograff.com").
+- There is no public API intended for third-party use; /api routes are internal.
