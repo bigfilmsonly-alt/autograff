@@ -1588,6 +1588,8 @@ function VIPModal({ onClose, onJoin }) {
     setSubmitting(false);
     setSubmitted(true);
     onJoin();
+    // Vercel Web Analytics custom event (no-op until Web Analytics is enabled on the project).
+    try { if (typeof window !== 'undefined' && typeof window.va === 'function') window.va('event', { name: 'VIP Signup' }); } catch (_) {}
     setTimeout(onClose, 3200);
   };
   const field = { width:'100%', padding:'12px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.18)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, fontFamily:'Georgia,serif', outline:'none', marginBottom:10 };

@@ -1,0 +1,9 @@
+# AUTOGRAFF — https://www.aut0graff.com
+User-agent: *
+Allow: /
+
+# Keep the VIP admin dashboard and API routes out of search results
+Disallow: /admin.html
+Disallow: /api/
+
+Sitemap: https://www.aut0graff.com/sitemap.xml
