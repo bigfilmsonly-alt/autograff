@@ -63,7 +63,7 @@ const makePlaceholder = (c1, c2, label, shapes = '') => {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
-const LOGO_URI = '/logo-icon.png';
+const LOGO_URI = '/at-mark-white.png';
 
 const SEED_PHOTOS = [
   { id:1,  src:'/photos/1-surfer.jpg',      type:'image', user:'aurora_lens',   title:'Big Wave',        likes:2340 },
