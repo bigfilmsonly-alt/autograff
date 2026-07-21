@@ -8,7 +8,7 @@ if (typeof document !== 'undefined') {
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     ::-webkit-scrollbar { display: none; }
     html, body, #root { height:100%; overflow:hidden; }
-    body { font-family: Georgia, serif; background: #000; color: #fff; }
+    body { font-family: Georgia, serif; background: #000; color: #fff; font-weight: 600; }
     @media (min-width:769px) {
       body { background: #000; }
     }
@@ -343,9 +343,9 @@ function AppStoreBanner({ style }) {
       backgroundImage:'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 12px)',
       border:'1px solid rgba(255,255,255,0.08)', ...style }}>
       <div style={{ fontSize:26, marginBottom:8 }}>{'\uD83D\uDCF1'}</div>
-      <div style={{ fontFamily:IMP, fontSize:10, letterSpacing:5, color:'rgba(255,255,255,0.5)', marginBottom:8 }}>COMING SOON TO iOS</div>
+      <div style={{ fontFamily:IMP, fontSize:10, letterSpacing:5, color:'#fff', marginBottom:8 }}>COMING SOON TO iOS</div>
       <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5.5vw,26px)', letterSpacing:1, lineHeight:1.1, marginBottom:10 }}>THE APP DROPS<br/>ON THE APP STORE</div>
-      <div style={{ fontSize:12.5, lineHeight:1.55, color:'rgba(255,255,255,0.62)', maxWidth:320, margin:'0 auto 18px' }}>
+      <div style={{ fontSize:12.5, lineHeight:1.55, color:'#fff', maxWidth:320, margin:'0 auto 18px' }}>
         AUTOGRAFF is launching on iPhone. Join the VIP list and we{'\u2019'}ll notify you the moment it{'\u2019'}s live {'\u2014'} plus the drop date and first look at the designs.
       </div>
       <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
@@ -358,7 +358,7 @@ function AppStoreBanner({ style }) {
         border:'1px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.04)' }}>
         <span style={{ fontSize:16 }}>{'\uF8FF'}</span>
         <div style={{ textAlign:'left', lineHeight:1.1 }}>
-          <div style={{ fontSize:8, color:'rgba(255,255,255,0.5)', letterSpacing:1 }}>Coming soon on the</div>
+          <div style={{ fontSize:8, color:'#fff', letterSpacing:1 }}>Coming soon on the</div>
           <div style={{ fontFamily:IMP, fontSize:13, letterSpacing:1 }}>App Store</div>
         </div>
       </div>
@@ -394,7 +394,7 @@ function PageHeader({ setPage, subtitle, right }) {
         <LogoButton setPage={setPage} />
         <div>
           <div style={{ fontFamily:IMP, fontSize:'clamp(18px,2.5vw,32px)', color:'#fff', letterSpacing:'-.5px', lineHeight:1, fontWeight:900 }}>AUTOGRAFF</div>
-          <div style={{ fontSize:'clamp(10px,1vw,12px)', color:'rgba(255,255,255,0.35)', letterSpacing:3, textTransform:'uppercase', marginTop:2 }}>{subtitle}</div>
+          <div style={{ fontSize:'clamp(10px,1vw,12px)', color:'#fff', letterSpacing:3, textTransform:'uppercase', marginTop:2 }}>{subtitle}</div>
         </div>
       </div>
       {right}
@@ -461,7 +461,7 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
       {/* Title + author */}
       <div style={{ position:'absolute', bottom:16, left:18, right:70, zIndex:60 }}>
         <div style={{ fontFamily:IMP, fontSize:'clamp(16px,2.4vw,22px)', color:'#fff', fontWeight:700, textShadow:'0 1px 6px rgba(0,0,0,0.5)' }}>{photo.title}</div>
-        <div style={{ fontSize:11, color:'rgba(255,255,255,0.7)', letterSpacing:0.5 }}>@{photo.user}</div>
+        <div style={{ fontSize:11, color:'#fff', letterSpacing:0.5 }}>@{photo.user}</div>
       </div>
 
       {/* Subtle like + share overlays */}
@@ -544,7 +544,7 @@ function UploadModal({ onClose, onUpload }) {
               <span style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,0.6)', color:'#fff', fontSize:9, padding:'3px 8px', borderRadius:4, letterSpacing:1, fontFamily:IMP }}>TAP TO CHANGE</span>
             </>
           ) : (
-            <div style={{ textAlign:'center', color:'rgba(255,255,255,0.3)' }}>
+            <div style={{ textAlign:'center', color:'#fff' }}>
               <div style={{ fontSize:28 }}>{'\uD83D\uDCF7'}</div>
               <div style={{ fontSize:11, marginTop:6 }}>Tap to browse or drag & drop</div>
             </div>
@@ -554,7 +554,7 @@ function UploadModal({ onClose, onUpload }) {
           <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10, padding:'7px 10px', background:'rgba(0,0,0,0.03)', borderRadius:8 }}>
             <span>{file.type.startsWith('video')?'\uD83C\uDFAC':'\uD83D\uDCF7'}</span>
             <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{file.name}</span>
-            <span style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>{(file.size/1024/1024).toFixed(1)} MB</span>
+            <span style={{ fontSize:10, color:'#fff' }}>{(file.size/1024/1024).toFixed(1)} MB</span>
             <button onClick={()=>{setFile(null);setPreview(null)}} style={{ background:'none', border:'none', cursor:'pointer', fontSize:13 }}>{'\u2715'}</button>
           </div>
         )}
@@ -572,7 +572,7 @@ function UploadModal({ onClose, onUpload }) {
             <div style={{ width:'70%', height:4, background:'rgba(0,0,0,0.08)', borderRadius:2, overflow:'hidden' }}>
               <div style={{ height:'100%', background:'#000', borderRadius:2, width:`${progress}%`, transition:'width 0.12s' }} />
             </div>
-            <div style={{ marginTop:8, fontSize:11, color:'rgba(255,255,255,0.4)' }}>{Math.round(progress)}%</div>
+            <div style={{ marginTop:8, fontSize:11, color:'#fff' }}>{Math.round(progress)}%</div>
           </div>
         )}
       </div>
@@ -619,7 +619,7 @@ function ScrollRow({ photos, speed = 0.9, rowHeight: rh = 160, cardWidth: cw = 2
           </div>
           <div style={{ position:'absolute', bottom:10, left:10 }}>
             <div style={{ fontFamily:IMP, fontSize:13, color:'#fff', fontWeight:700 }}>{p.title}</div>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,0.6)' }}>@{p.user}</div>
+            <div style={{ fontSize:9, color:'#fff' }}>@{p.user}</div>
           </div>
         </div>
       ))}
@@ -647,21 +647,21 @@ function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
         </div>
         <div style={{ textAlign:'center', padding:'6px 18px 0' }}>
           <div style={{ fontFamily:IMP, fontSize:18 }}>{member.name}</div>
-          <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:1 }}>@{member.handle}</div>
-          <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:5 }}>{member.bio}</div>
+          <div style={{ fontSize:11, color:'#fff', marginTop:1 }}>@{member.handle}</div>
+          <div style={{ fontSize:11, color:'#fff', marginTop:5 }}>{member.bio}</div>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, margin:'14px clamp(14px,3vw,40px)', background:'rgba(0,0,0,0.06)', borderRadius:10, overflow:'hidden' }}>
           {[{l:'Posts',v:member.posts.length},{l:'Followers',v:member.followers},{l:'Following',v:member.following},{l:'Score',v:member.score}].map(s=>(
             <div key={s.l} style={{ background:'#000', padding:'8px 0', textAlign:'center' }}>
               <div style={{ fontFamily:IMP, fontSize:15 }}>{s.v.toLocaleString()}</div>
-              <div style={{ fontSize:8, color:'rgba(255,255,255,0.4)', letterSpacing:2, textTransform:'uppercase' }}>{s.l}</div>
+              <div style={{ fontSize:8, color:'#fff', letterSpacing:2, textTransform:'uppercase' }}>{s.l}</div>
             </div>
           ))}
         </div>
         <div style={{ margin:'0 18px 10px', padding:'8px 12px', background:'#000', borderRadius:10, display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:18 }}>{emoji}</span>
           <div style={{ flex:1 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:9, color:'rgba(255,255,255,0.5)', marginBottom:3 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:9, color:'#fff', marginBottom:3 }}>
               <span>{member.rank}</span><span>{member.score.toLocaleString()}/{target.toLocaleString()}</span>
             </div>
             <div style={{ height:3, background:'rgba(255,255,255,0.15)', borderRadius:2 }}>
@@ -697,7 +697,7 @@ function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
           ):(
             <div>{[{l:'Handle',v:'@'+member.handle},{l:'Rank',v:member.rank},{l:'Score',v:member.score.toLocaleString()},{l:'Posts',v:member.posts.length},{l:'Followers',v:member.followers.toLocaleString()},{l:'Following',v:member.following}].map(r=>(
               <div key={r.l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
-                <span style={{ color:'rgba(255,255,255,0.4)', fontSize:10, letterSpacing:1 }}>{r.l}</span>
+                <span style={{ color:'#fff', fontSize:10, letterSpacing:1 }}>{r.l}</span>
                 <span style={{ fontFamily:IMP, fontSize:12 }}>{r.v}</span>
               </div>
             ))}</div>
@@ -742,7 +742,7 @@ function SplashPage({ setPage }) {
         <button
           onClick={openVIP}
           style={{
-            marginTop:-16, background:'transparent', border:'none', color:'rgba(255,255,255,0.55)',
+            marginTop:-16, background:'transparent', border:'none', color:'#fff',
             fontFamily:IMP, fontSize:'clamp(10px,2.6vw,12px)', letterSpacing:4, textTransform:'uppercase',
             cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'color 0.25s',
           }}
@@ -818,7 +818,7 @@ function PhotosPage({ setPage }) {
       <PageHeader setPage={setPage} subtitle="SHARE TO WIN" right={
         <div style={{ display:'flex', gap:6 }}>
           <button onClick={()=>shareAutograff()}
-            style={{ background:'rgba(0,0,0,0.04)', color:'rgba(255,255,255,0.5)', border:'1px solid rgba(0,0,0,0.1)',
+            style={{ background:'rgba(0,0,0,0.04)', color:'#fff', border:'1px solid rgba(0,0,0,0.1)',
               width:44, height:44, padding:0, borderRadius:8, fontSize:16, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
             }}>{'\uD83D\uDCAC'}</button>
@@ -829,8 +829,8 @@ function PhotosPage({ setPage }) {
         </div>
       } />
       <div style={{ padding:'10px clamp(14px,3vw,40px) 0', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,0.35)', letterSpacing:2, fontFamily:IMP }}>{'\u2014'} {photos.length} ENTRIES TODAY</span>
-        <span style={{ fontSize:9, color:'rgba(255,255,255,0.25)', letterSpacing:1 }}>Swipe {'\u00B7'} Tap {'\u2764\uFE0F'} to like {'\u00B7'} {'\u2197\uFE0F'} to share</span>
+        <span style={{ fontSize:10, color:'#fff', letterSpacing:2, fontFamily:IMP }}>{'\u2014'} {photos.length} ENTRIES TODAY</span>
+        <span style={{ fontSize:9, color:'#fff', letterSpacing:1 }}>Swipe {'\u00B7'} Tap {'\u2764\uFE0F'} to like {'\u00B7'} {'\u2197\uFE0F'} to share</span>
       </div>
       <div className="pc-shelf" style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', overflow:'hidden' }}>
         <div ref={scrollRef} className="pc-scroller" onMouseEnter={()=>pauseRef.current=true} onMouseLeave={()=>pauseRef.current=false}
@@ -843,12 +843,12 @@ function PhotosPage({ setPage }) {
           ))}
         </div>
       </div>
-      <div className="pc-cta" style={{ padding:'16px clamp(14px,3vw,40px) 80px', display:'flex', flexDirection:'column', alignItems:'center', gap:10, flexShrink:0 }}>
+      <div className="pc-cta" style={{ padding:'16px clamp(14px,3vw,40px) calc(124px + env(safe-area-inset-bottom, 0px))', display:'flex', flexDirection:'column', alignItems:'center', gap:10, flexShrink:0 }}>
         <div onClick={()=>setShowModal(true)} style={{
-          width:56, height:56, borderRadius:'50%', border:'2px dashed rgba(0,0,0,0.15)',
+          width:56, height:56, borderRadius:'50%', border:'2px dashed rgba(255,255,255,0.3)',
           display:'flex', alignItems:'center', justifyContent:'center', fontSize:22,
-          color:'rgba(255,255,255,0.2)', cursor:'pointer' }}>+</div>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,0.25)', letterSpacing:3, fontFamily:IMP }}>DRAG & DROP OR TAP TO UPLOAD</span>
+          color:'#fff', cursor:'pointer' }}>+</div>
+        <span style={{ fontSize:10, color:'#fff', letterSpacing:3, fontFamily:IMP }}>DRAG & DROP OR TAP TO UPLOAD</span>
       </div>
       {showModal && <UploadModal onClose={()=>setShowModal(false)} onUpload={photo=>{setPhotos(p=>[photo,...p]);setLikeCounts(p=>({...p,[photo.id]:0}));}} />}
     </div>
@@ -902,7 +902,7 @@ function LeaderboardPage({ setPage }) {
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="THE LEDGER" />
       <div style={{ padding:'6px clamp(14px,3vw,40px) 0', flexShrink:0 }}>
-        <p style={{ fontSize:10, color:'rgba(255,255,255,0.4)', letterSpacing:0.5, margin:'0 0 8px' }}>
+        <p style={{ fontSize:10, color:'#fff', letterSpacing:0.5, margin:'0 0 8px' }}>
           We support the liker, we like the supporter. Give love to climb — lurk and you sink.
         </p>
         <div style={{ display:'flex', gap:6 }}>
@@ -928,14 +928,14 @@ function LeaderboardPage({ setPage }) {
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>{e.title}</div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>@{e.user}</div>
+                  <div style={{ fontSize:10, color:'#fff' }}>@{e.user}</div>
                   <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
                     <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
                 <div style={{ textAlign:'right', minWidth:44 }}>
                   <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700 }}>{fmtV(e.votes)}</div>
-                  <div style={{ fontSize:8, color:'rgba(255,255,255,0.35)', letterSpacing:2 }}>LIKES</div>
+                  <div style={{ fontSize:8, color:'#fff', letterSpacing:2 }}>LIKES</div>
                 </div>
                 <button onClick={()=>handleVote(e.id)} disabled={!!voted[key]} style={{
                   padding:'6px 12px', borderRadius:8, fontSize:10, cursor:voted[key]?'default':'pointer',
@@ -950,7 +950,7 @@ function LeaderboardPage({ setPage }) {
       ) : (
         <div style={{ flex:1, overflow:'auto', padding:'8px 18px 120px' }}>
           {supporters.filter(s=>s.score>0).length===0 && (
-            <div style={{ textAlign:'center', padding:'40px 20px', color:'rgba(255,255,255,0.35)', fontSize:12 }}>
+            <div style={{ textAlign:'center', padding:'40px 20px', color:'#fff', fontSize:12 }}>
               No supporters yet. Be the first to give love — go like some photos.
             </div>
           )}
@@ -964,14 +964,14 @@ function LeaderboardPage({ setPage }) {
                   color:i===0?'#fff':'rgba(0,0,0,0.5)' }}>{(s.name||'?').replace(/^guest_/,'').slice(0,2).toUpperCase()}</div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>@{s.name}{mine&&<span style={{ fontSize:9, color:'#3ad07a', marginLeft:6 }}>YOU</span>}</div>
-                  <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>{i===0?'Patron of the day':'Supporter'}</div>
+                  <div style={{ fontSize:10, color:'#fff' }}>{i===0?'Patron of the day':'Supporter'}</div>
                   <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
                     <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
                 <div style={{ textAlign:'right', minWidth:44 }}>
                   <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700 }}>{fmtV(s.score)}</div>
-                  <div style={{ fontSize:8, color:'rgba(255,255,255,0.35)', letterSpacing:2 }}>GIVEN</div>
+                  <div style={{ fontSize:8, color:'#fff', letterSpacing:2 }}>GIVEN</div>
                 </div>
               </div>
             );
@@ -979,7 +979,7 @@ function LeaderboardPage({ setPage }) {
           {stagnant.length>0 && (
             <div style={{ marginTop:18, padding:'14px 16px', borderRadius:12, background:'rgba(229,57,53,0.06)', border:'1px dashed rgba(229,57,53,0.35)' }}>
               <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:1, color:'#e53935' }}>{'\uD83E\uDD87'} THE STAGNANT ({stagnant.length})</div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', margin:'4px 0 8px' }}>Showed up, watched the show, never gave a like. Zero love. Do better.</div>
+              <div style={{ fontSize:10, color:'#fff', margin:'4px 0 8px' }}>Showed up, watched the show, never gave a like. Zero love. Do better.</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {stagnant.map(s=>(
                   <span key={s.uid} style={{ fontSize:10, fontFamily:IMP, letterSpacing:0.5, padding:'4px 8px', borderRadius:14,
@@ -1001,7 +1001,7 @@ function LeaderboardPage({ setPage }) {
           : [{l:'LOVE GIVEN',v:fmtV(totalGiven)},{l:'TOP PATRON',v:supporters[0]?'@'+supporters[0].name:'-'},{l:'STAGNANT',v:stagnant.length}]
         ).map(s=>(
           <div key={s.l} style={{ textAlign:'center' }}>
-            <div style={{ fontSize:8, color:'rgba(255,255,255,0.35)', letterSpacing:2, fontFamily:IMP }}>{s.l}</div>
+            <div style={{ fontSize:8, color:'#fff', letterSpacing:2, fontFamily:IMP }}>{s.l}</div>
             <div style={{ fontFamily:IMP, fontSize:13, marginTop:2 }}>{s.v}</div>
           </div>
         ))}
@@ -1035,13 +1035,13 @@ function GuestPage({ setPage }) {
       <div style={{ background:'#000', padding:'9px 0', overflow:'hidden', flexShrink:0 }}>
         <div style={{ display:'flex', animation:'marqueeText 14s linear infinite', whiteSpace:'nowrap' }}>
           {[0,1,2,3].map(i=>(
-            <span key={i} style={{ fontFamily:IMP, fontSize:12, color:'rgba(255,255,255,0.5)', letterSpacing:4 }}>{marquee}</span>
+            <span key={i} style={{ fontFamily:IMP, fontSize:12, color:'#fff', letterSpacing:4 }}>{marquee}</span>
           ))}
         </div>
       </div>
       {/* Trending Now */}
       <div style={{ padding:'14px 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'rgba(255,255,255,0.4)' }}>{'\u2014'} {'\uD83D\uDD25'} TRENDING NOW</div>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} {'\uD83D\uDD25'} TRENDING NOW</div>
         <ScrollRow photos={SEED_PHOTOS} speed={0.7} rowHeight={190} cardWidth={280} />
       </div>
       {/* Stats bar */}
@@ -1050,18 +1050,18 @@ function GuestPage({ setPage }) {
         {[{v:'12K+',l:'MEMBERS'},{v:'48K+',l:'PHOTOS'},{v:'200K+',l:'LIKES TODAY'},{v:'Daily',l:'WINNERS'}].map((s,i)=>(
           <div key={s.l} style={{ textAlign:'center', padding:'0 8px', borderRight:i<3?'1px solid rgba(255,255,255,0.1)':'none' }}>
             <div style={{ fontFamily:IMP, fontSize:16, color:'#fff', fontWeight:700 }}>{s.v}</div>
-            <div style={{ fontSize:8, color:'rgba(255,255,255,0.4)', letterSpacing:2, marginTop:2 }}>{s.l}</div>
+            <div style={{ fontSize:8, color:'#fff', letterSpacing:2, marginTop:2 }}>{s.l}</div>
           </div>
         ))}
       </div>
       {/* Most Recent */}
       <div style={{ padding:'0 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'rgba(255,255,255,0.4)' }}>{'\u2014'} {'\uD83C\uDD95'} MOST RECENT</div>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} {'\uD83C\uDD95'} MOST RECENT</div>
         <ScrollRow photos={[...SEED_PHOTOS].reverse()} speed={1.1} rowHeight={150} cardWidth={240} />
       </div>
       {/* Member Benefits */}
       <div style={{ padding:'18px clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'rgba(255,255,255,0.4)' }}>{'\u2014'} MEMBER BENEFITS</div>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'#fff' }}>{'\u2014'} MEMBER BENEFITS</div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
           {benefits.map((b,i)=>(
             <div key={i} onClick={()=>setExpandedTile(expandedTile===i?null:i)} style={{
@@ -1078,7 +1078,7 @@ function GuestPage({ setPage }) {
       </div>
       {/* Top Rated */}
       <div style={{ padding:'0 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'rgba(255,255,255,0.4)' }}>{'\u2014'} {'\u2B50'} TOP RATED</div>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} {'\u2B50'} TOP RATED</div>
         <ScrollRow photos={[...SEED_PHOTOS.slice(3),...SEED_PHOTOS.slice(0,3)]} speed={1.4} rowHeight={140} cardWidth={200} />
       </div>
       {/* App Store coming soon */}
@@ -1088,7 +1088,7 @@ function GuestPage({ setPage }) {
         backgroundImage:'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 12px)',
         textAlign:'center', flexShrink:0 }}>
         <div style={{ fontFamily:IMP, fontSize:17, color:'#fff', letterSpacing:3 }}>JOIN THE CONTEST</div>
-        <div style={{ fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:5, letterSpacing:2 }}>UPLOAD {'\u00B7'} COMPETE {'\u00B7'} WIN</div>
+        <div style={{ fontSize:11, color:'#fff', marginTop:5, letterSpacing:2 }}>UPLOAD {'\u00B7'} COMPETE {'\u00B7'} WIN</div>
         {joined?(
           <div style={{ marginTop:18, fontSize:13, color:'#fff' }}>{'\u2705'} YOU'RE ON THE LIST!</div>
         ):(
@@ -1102,7 +1102,7 @@ function GuestPage({ setPage }) {
           </div>
         )}
         <button onClick={()=>setPage('photos')} style={{
-          marginTop:14, background:'none', border:'none', color:'rgba(255,255,255,0.5)',
+          marginTop:14, background:'none', border:'none', color:'#fff',
           fontSize:11, cursor:'pointer', letterSpacing:1 }}>Browse as Guest {'\u2192'}</button>
       </div>
     </div>
@@ -1125,7 +1125,7 @@ function MembersPage({ setPage }) {
       <PageHeader setPage={setPage} subtitle="MEMBERS" />
       <div style={{ padding:'12px clamp(14px,3vw,40px) 0', flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 14px', background:'rgba(0,0,0,0.03)', borderRadius:10, border:'1px solid rgba(0,0,0,0.06)' }}>
-          <span style={{ color:'rgba(255,255,255,0.3)' }}>{'\uD83D\uDD0D'}</span>
+          <span style={{ color:'#fff' }}>{'\uD83D\uDD0D'}</span>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search members..."
             style={{ flex:1, border:'none', background:'none', fontSize:12, outline:'none', fontFamily:'Georgia,serif' }} />
         </div>
@@ -1138,7 +1138,7 @@ function MembersPage({ setPage }) {
             background:filter===f?'#000':'#fff', color:filter===f?'#fff':'rgba(0,0,0,0.5)',
           }}>{f!=='All'?rankEmoji(f)+' ':''}{f.toUpperCase()}</button>
         ))}
-        <span style={{ marginLeft:'auto', fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:IMP, letterSpacing:1 }}>{members.length} MEMBERS</span>
+        <span style={{ marginLeft:'auto', fontSize:10, color:'#fff', fontFamily:IMP, letterSpacing:1 }}>{members.length} MEMBERS</span>
       </div>
       <div style={{ flex:1, overflow:'auto', padding:'0 clamp(14px,3vw,40px) 100px' }}>
         {members.map(m=>(
@@ -1153,12 +1153,12 @@ function MembersPage({ setPage }) {
                 <span style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>{m.name}</span>
                 <span style={{ fontSize:12 }}>{rankEmoji(m.rank)}</span>
               </div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.4)' }}>@{m.handle}</div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.45)', marginTop:2 }}>{m.bio}</div>
+              <div style={{ fontSize:10, color:'#fff' }}>@{m.handle}</div>
+              <div style={{ fontSize:10, color:'#fff', marginTop:2 }}>{m.bio}</div>
               <div style={{ display:'flex', gap:8, marginTop:4, fontSize:10 }}>
-                <span><b>{m.posts.length}</b> <span style={{ color:'rgba(255,255,255,0.35)' }}>Posts</span></span>
-                <span><b>{m.followers >= 1000 ? (m.followers/1000).toFixed(1)+'K' : m.followers}</b> <span style={{ color:'rgba(255,255,255,0.35)' }}>Followers</span></span>
-                <span><b>{m.score >= 1000 ? (m.score/1000).toFixed(1)+'K' : m.score}</b> <span style={{ color:'rgba(255,255,255,0.35)' }}>Score</span></span>
+                <span><b>{m.posts.length}</b> <span style={{ color:'#fff' }}>Posts</span></span>
+                <span><b>{m.followers >= 1000 ? (m.followers/1000).toFixed(1)+'K' : m.followers}</b> <span style={{ color:'#fff' }}>Followers</span></span>
+                <span><b>{m.score >= 1000 ? (m.score/1000).toFixed(1)+'K' : m.score}</b> <span style={{ color:'#fff' }}>Score</span></span>
               </div>
             </div>
             <button onClick={e=>{e.stopPropagation();setFollowing(p=>({...p,[m.id]:!p[m.id]}))}} style={{
@@ -1247,19 +1247,19 @@ function StudioPage({ setPage }) {
       } />
       {/* Transport */}
       <div style={{ padding:'8px clamp(14px,3vw,40px)', display:'flex', alignItems:'center', gap:8, flexShrink:0, flexWrap:'wrap', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
-        <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.4)' }}>BPM</span>
+        <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff' }}>BPM</span>
         <button onClick={()=>setBpm(Math.max(60,bpm-5))} style={{ width:26, height:26, borderRadius:6, border:'1px solid rgba(0,0,0,0.12)', background:'#000', cursor:'pointer', fontSize:13, fontFamily:IMP }}>{'\u2212'}</button>
         <span style={{ fontFamily:IMP, fontSize:18, minWidth:36, textAlign:'center', fontWeight:700 }}>{bpm}</span>
         <button onClick={()=>setBpm(Math.min(200,bpm+5))} style={{ width:26, height:26, borderRadius:6, border:'1px solid rgba(0,0,0,0.12)', background:'#000', cursor:'pointer', fontSize:13, fontFamily:IMP }}>+</button>
-        <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.4)', marginLeft:6 }}>SWING</span>
+        <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff', marginLeft:6 }}>SWING</span>
         <input type="range" min="0" max="80" value={swing} onChange={e=>setSwing(Number(e.target.value))} style={{ width:60 }} />
         <span style={{ fontFamily:IMP, fontSize:11 }}>{swing}%</span>
       </div>
       {/* Genre presets — tap to load & auto-play out loud */}
       <div style={{ padding:'8px clamp(14px,3vw,40px)', flexShrink:0, borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
-          <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'rgba(255,255,255,0.4)' }}>{'\uD83C\uDFB5'} GENRE PRESETS</span>
-          <span style={{ fontSize:9, color:'rgba(255,255,255,0.3)', letterSpacing:1 }}>Tap a genre — it plays instantly {'\u25B6'}</span>
+          <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff' }}>{'\uD83C\uDFB5'} GENRE PRESETS</span>
+          <span style={{ fontSize:9, color:'#fff', letterSpacing:1 }}>Tap a genre — it plays instantly {'\u25B6'}</span>
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2 }}>
           {Object.keys(PRESETS).map(n=>{
@@ -1347,7 +1347,7 @@ function StudioPage({ setPage }) {
               <button onClick={()=>setPatterns(p=>({...p,[track.id]:p[track.id].map(()=>Math.random()>0.65)}))}
                 style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:13, cursor:'pointer', background:'#000' }}>{'\uD83C\uDFB2'}</button>
               <button onClick={()=>setPatterns(p=>({...p,[track.id]:new Array(16).fill(false)}))}
-                style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:12, cursor:'pointer', background:'#000', color:'rgba(255,255,255,0.3)' }}>{'\u2715'}</button>
+                style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(0,0,0,0.1)', fontSize:12, cursor:'pointer', background:'#000', color:'#fff' }}>{'\u2715'}</button>
             </div>
           </div>
         ))}
@@ -1386,7 +1386,7 @@ function ProfilePage({ setPage }) {
               border:'2px dashed rgba(0,0,0,0.12)',
             }}>
               {avatar ? <img src={avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                : <span style={{ fontSize:32, color:'rgba(255,255,255,0.15)' }}>{'\uD83D\uDC64'}</span>}
+                : <span style={{ fontSize:32, color:'#fff' }}>{'\uD83D\uDC64'}</span>}
             </div>
             <div onClick={()=>avatarRef.current?.click()} style={{
               position:'absolute', bottom:-2, right:-2, width:24, height:24, borderRadius:'50%',
@@ -1422,13 +1422,13 @@ function ProfilePage({ setPage }) {
           <div style={{ background:'#000', borderRadius:12, padding:'12px 14px', textAlign:'center', flexShrink:0, minWidth:72 }}>
             <div style={{ fontSize:18 }}>{rankEmoji}</div>
             <div style={{ fontFamily:IMP, fontSize:'clamp(16px,4vw,20px)', color:'#fff', lineHeight:1, marginTop:4 }}>{score.toLocaleString()}</div>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.6)', letterSpacing:1, marginTop:3 }}>{rank.toUpperCase()}</div>
+            <div style={{ fontSize:10, color:'#fff', letterSpacing:1, marginTop:3 }}>{rank.toUpperCase()}</div>
           </div>
         </div>
         {/* Progress bar */}
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-          <span style={{ fontSize:9, fontFamily:IMP, letterSpacing:2, color:'rgba(255,255,255,0.4)' }}>PROGRESS TO NEXT RANK</span>
-          <span style={{ fontSize:10, fontFamily:IMP, color:'rgba(255,255,255,0.35)' }}>{score} / {target}</span>
+          <span style={{ fontSize:9, fontFamily:IMP, letterSpacing:2, color:'#fff' }}>PROGRESS TO NEXT RANK</span>
+          <span style={{ fontSize:10, fontFamily:IMP, color:'#fff' }}>{score} / {target}</span>
         </div>
         <div style={{ height:4, background:'rgba(0,0,0,0.06)', borderRadius:2, marginBottom:18, overflow:'hidden' }}>
           <div style={{ height:'100%', background:'#000', borderRadius:2, width:`${progress}%`, transition:'width 0.3s' }} />
@@ -1448,7 +1448,7 @@ function ProfilePage({ setPage }) {
         {/* Tab content */}
         {tab==='uploads'&&(
           uploads.length===0?(
-            <div style={{ textAlign:'center', padding:'50px 0', color:'rgba(255,255,255,0.2)' }}>
+            <div style={{ textAlign:'center', padding:'50px 0', color:'#fff' }}>
               <div style={{ fontSize:36 }}>{'\uD83D\uDCF7'}</div>
               <div style={{ fontSize:11, marginTop:10, fontFamily:IMP, letterSpacing:2 }}>NO UPLOADS YET</div>
             </div>
@@ -1469,7 +1469,7 @@ function ProfilePage({ setPage }) {
         )}
         {tab==='archive'&&(
           archived.length===0?(
-            <div style={{ textAlign:'center', padding:'50px 0', color:'rgba(255,255,255,0.2)' }}>
+            <div style={{ textAlign:'center', padding:'50px 0', color:'#fff' }}>
               <div style={{ fontSize:36 }}>{'\uD83D\uDCC1'}</div>
               <div style={{ fontSize:11, marginTop:10, fontFamily:IMP, letterSpacing:2 }}>ARCHIVE EMPTY</div>
             </div>
@@ -1486,7 +1486,7 @@ function ProfilePage({ setPage }) {
         )}
         {tab==='collection'&&(
           collection.length===0?(
-            <div style={{ textAlign:'center', padding:'50px 0', color:'rgba(255,255,255,0.2)' }}>
+            <div style={{ textAlign:'center', padding:'50px 0', color:'#fff' }}>
               <div style={{ fontSize:36 }}>{'\uD83D\uDCBE'}</div>
               <div style={{ fontSize:11, marginTop:10, fontFamily:IMP, letterSpacing:2 }}>NOTHING SAVED YET</div>
             </div>
@@ -1593,18 +1593,18 @@ function VIPModal({ onClose, onJoin }) {
     setTimeout(onClose, 3200);
   };
   const field = { width:'100%', padding:'12px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.18)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, fontFamily:'Georgia,serif', outline:'none', marginBottom:10 };
-  const lbl = { display:'block', textAlign:'left', fontFamily:IMP, fontSize:9, letterSpacing:2, color:'rgba(255,255,255,0.4)', marginBottom:5 };
+  const lbl = { display:'block', textAlign:'left', fontFamily:IMP, fontSize:9, letterSpacing:2, color:'#fff', marginBottom:5 };
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:800, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:'#000', color:'#fff', borderRadius:18, width:440, maxWidth:'94vw', maxHeight:'92vh', overflowY:'auto', padding:'32px 30px 26px', position:'relative', boxShadow:'0 24px 80px rgba(0,0,0,0.55)', border:'1px solid rgba(255,255,255,0.08)' }}>
-        <button onClick={onClose} aria-label="Close" style={{ position:'absolute', top:14, right:16, background:'none', border:'none', color:'rgba(255,255,255,0.4)', fontSize:20, cursor:'pointer', lineHeight:1, zIndex:2 }}>{'\u2715'}</button>
+        <button onClick={onClose} aria-label="Close" style={{ position:'absolute', top:14, right:16, background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer', lineHeight:1, zIndex:2 }}>{'\u2715'}</button>
         {!submitted ? (
           <>
             <div style={{ textAlign:'center' }}>
               <div style={{ fontSize:30, marginBottom:10 }}>{'\uD83D\uDE80'}</div>
               <div style={{ fontFamily:IMP, fontSize:11, letterSpacing:5, color:'#fff', opacity:0.5, marginBottom:12 }}>VIP WAITING LIST {'\u00B7'} COMING TO iOS</div>
               <div style={{ fontFamily:IMP, fontSize:'clamp(23px,6vw,29px)', letterSpacing:1, lineHeight:1.08, marginBottom:12 }}>BE FIRST ON<br/>THE APP STORE</div>
-              <div style={{ fontSize:13, lineHeight:1.55, color:'rgba(255,255,255,0.65)', marginBottom:22, maxWidth:340, marginLeft:'auto', marginRight:'auto' }}>
+              <div style={{ fontSize:13, lineHeight:1.55, color:'#fff', marginBottom:22, maxWidth:340, marginLeft:'auto', marginRight:'auto' }}>
                 Complete your profile to join the VIP waiting list. VIPs get in first {'\u2014'} we{'\u2019'}ll notify you the moment AUTOGRAFF hits the App Store, plus the drop date and first look at the designs.
               </div>
             </div>
@@ -1625,7 +1625,7 @@ function VIPModal({ onClose, onJoin }) {
               onMouseEnter={e=>{ if(!submitting) e.currentTarget.style.transform='scale(1.02)'; }} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
               {submitting ? 'JOINING\u2026' : <>JOIN THE VIP LIST {'\u2192'}</>}
             </button>
-            <div style={{ marginTop:16, display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontSize:10.5, color:'rgba(255,255,255,0.4)', letterSpacing:1 }}>
+            <div style={{ marginTop:16, display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontSize:10.5, color:'#fff', letterSpacing:1 }}>
               <span style={{ width:6, height:6, borderRadius:'50%', background:'#3ad07a', boxShadow:'0 0 8px #3ad07a' }} />
               {spots} creators joined today {'\u00B7'} No spam, ever
             </div>
@@ -1634,7 +1634,7 @@ function VIPModal({ onClose, onJoin }) {
           <div style={{ padding:'24px 0', textAlign:'center' }}>
             <div style={{ fontSize:42, marginBottom:14, color:'#3ad07a' }}>{'\u2713'}</div>
             <div style={{ fontFamily:IMP, fontSize:24, letterSpacing:1, marginBottom:10 }}>YOU{'\u2019'}RE ON THE VIP LIST</div>
-            <div style={{ fontSize:13, lineHeight:1.55, color:'rgba(255,255,255,0.65)', maxWidth:300, margin:'0 auto' }}>
+            <div style={{ fontSize:13, lineHeight:1.55, color:'#fff', maxWidth:300, margin:'0 auto' }}>
               {name ? name.split(' ')[0] + ', you' : 'You'}{'\u2019'}re in. We{'\u2019'}ll email you the second AUTOGRAFF hits the App Store {'\u2014'} plus the drop date and first look at the designs. No spam, ever.
             </div>
           </div>
