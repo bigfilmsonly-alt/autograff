@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
-import { Resend } from 'resend';
+// resend is imported lazily inside sendConfirmation() so this function never crashes on
+// load if the package can't be traced — a signup must never fail because of email.
 
 /*
  * VIP waiting list enrollment.
@@ -37,6 +38,7 @@ async function sendConfirmation(record) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, reason: 'RESEND_API_KEY not set' };
   try {
+    const { Resend } = await import('resend');
     const resend = new Resend(apiKey);
     const from = process.env.RESEND_FROM || 'AUTOGRAFF <onboarding@resend.dev>';
     const first = String(record.name || '').trim().split(/\s+/)[0];

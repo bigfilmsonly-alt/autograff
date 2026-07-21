@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/upload.js": { "includeFiles": "node_modules/@vercel/blob/**" },
+    "api/vip.js": { "includeFiles": "node_modules/resend/**" }
+  }
+}
