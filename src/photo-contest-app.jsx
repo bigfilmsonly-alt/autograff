@@ -331,6 +331,10 @@ function sendShare(id) {
       body: JSON.stringify({ id, action:'share' }) });
   } catch (_) {}
 }
+/* Creators this visitor follows, kept locally. */
+function followedSet(){ try { return new Set(JSON.parse(localStorage.getItem('autograff_following')||'[]')); } catch(_) { return new Set(); } }
+function isFollowing(h){ return followedSet().has(h); }
+function toggleFollow(h){ try { const s=followedSet(); if(s.has(h)) s.delete(h); else s.add(h); localStorage.setItem('autograff_following', JSON.stringify([...s])); return s.has(h); } catch(_) { return false; } }
 /* Per-visitor set of photo ids they've already liked (Instagram-style filled heart persists). */
 function likedSet() { try { return new Set(JSON.parse(localStorage.getItem('autograff_liked') || '[]')); } catch (_) { return new Set(); } }
 function hasLiked(id) { return likedSet().has(String(id)); }
@@ -801,11 +805,14 @@ function SplashPage({ setPage }) {
           onMouseEnter={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';e.currentTarget.style.letterSpacing='8px'}}
           onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#fff';e.currentTarget.style.letterSpacing='6px'}}
         >ENTER</button>
-        <div style={{ marginTop:-18, textAlign:'center', cursor:'pointer' }} onClick={openVIP}
-          title="Tap to join the waiting list">
-          <div style={{ fontFamily:HELV, fontSize:'clamp(9px,2.4vw,11px)', letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase' }}>Waitlist Number</div>
-          <div style={{ fontFamily:IMP, fontSize:'clamp(24px,7vw,40px)', letterSpacing:2, color:'#fff', marginTop:7 }}>#{waitlistNumber()}</div>
-        </div>
+        <button onClick={openVIP} style={{
+          marginTop:-16, background:'transparent', border:'none', color:'rgba(255,255,255,0.6)',
+          fontFamily:IMP, fontSize:'clamp(10px,2.6vw,12px)', letterSpacing:4, textTransform:'uppercase',
+          cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'color 0.25s',
+        }}
+          onMouseEnter={e=>e.currentTarget.style.color='#fff'}
+          onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.6)'}
+        >Join the waiting list {'→'}</button>
       </div>
     </div>
   );
@@ -871,7 +878,7 @@ function PhotosPage({ setPage }) {
   const displayList=[...photos,...photos,...photos];
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
-      <PageHeader setPage={setPage} subtitle="SHARE TO WIN" right={
+      <PageHeader setPage={setPage} subtitle="POST TO WIN" right={
         <div style={{ display:'flex', gap:6 }}>
           <button onClick={()=>shareAutograff()}
             style={{ background:'rgba(255,255,255,0.06)', color:'#fff', border:'1px solid rgba(255,255,255,0.18)',
@@ -942,7 +949,7 @@ function LeaderboardPage({ setPage }) {
       });
     };
     load();
-    const poll=setInterval(load,5000);
+    const poll=setInterval(load,2000);
     return()=>{active=false;clearInterval(poll);};
   },[]);
   const maxVotes=entries[0]?.votes||1;
@@ -1105,21 +1112,26 @@ function Marquee({ text, dur, bg, color, size }) {
 function GalleryCard({ item, counts, onView, onLove, onShare }) {
   const [bursts, setBursts] = useState([]);
   const [loved, setLoved] = useState(() => hasLiked(item.id));
+  const [pop, setPop] = useState(false);
+  const [following, setFollowing] = useState(() => isFollowing(item.creator));
   const g = useRef({ moved:false, skip:false, sx:0, sy:0 });
   const c = counts || { likes:0, shares:0 };
-  const love = (e) => {
-    e.stopPropagation();
+  const love = (clientX, clientY, el) => {
     if (!loved) { setLoved(true); markLiked(item.id); }
-    onLove(item.id);
-    const el = e.currentTarget.closest('[data-gcard]'); const r = el.getBoundingClientRect();
-    const parts = makeHeartBurst(e.clientX - r.left, e.clientY - r.top, 90);
-    setBursts(prev => [...prev, ...parts].slice(-450));
+    onLove(item.id);                                    // +1 love, persisted -> lands on the board
+    const r = el.getBoundingClientRect();
+    const parts = makeHeartBurst(clientX - r.left, clientY - r.top, 90);
+    setBursts(prev => [...prev, ...parts].slice(-500));
     setTimeout(() => setBursts(prev => prev.filter(p => !parts.includes(p))), 1500);
+    setPop(true); setTimeout(() => setPop(false), 200);
   };
+  const heartBtn = (e) => { e.stopPropagation(); love(e.clientX, e.clientY, e.currentTarget.closest('[data-gcard]')); };
   const share = (e) => { e.stopPropagation(); onShare(item); };
+  const expand = (e) => { e.stopPropagation(); onView(item); };
+  const followBtn = (e) => { e.stopPropagation(); setFollowing(toggleFollow(item.creator)); };
   const down = (e) => { const s2=g.current; s2.skip = !!(e.target.closest && e.target.closest('button')); s2.moved=false; s2.sx=e.clientX; s2.sy=e.clientY; };
   const move = (e) => { const s2=g.current; if (Math.abs(e.clientX-s2.sx)>10 || Math.abs(e.clientY-s2.sy)>10) s2.moved=true; };
-  const up = () => { const s2=g.current; if (!s2.skip && !s2.moved) onView(item); };
+  const up = (e) => { const s2=g.current; if (!s2.skip && !s2.moved) love(e.clientX, e.clientY, e.currentTarget); };  // TAP the picture = hearts explode + like
   return (
     <div data-gcard role="button" tabIndex={0}
       onPointerDown={down} onPointerMove={move} onPointerUp={up}
@@ -1129,19 +1141,24 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
       <img src={item.src} alt={item.title} loading="lazy" draggable={false} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', background:'#070707', pointerEvents:'none' }} />
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, transparent 44%, rgba(0,0,0,0.82) 100%)' }} />
       <FloatingHearts bursts={bursts} />
+      <button onClick={expand} title="View" style={{ position:'absolute', top:12, right:12, background:'rgba(0,0,0,0.45)', border:'1px solid rgba(255,255,255,0.25)', color:'#fff', fontFamily:IMP, fontSize:9, letterSpacing:2, padding:'5px 10px', borderRadius:0, cursor:'pointer' }}>VIEW</button>
       <div style={{ position:'absolute', left:16, right:92, bottom:14, pointerEvents:'none' }}>
         <div style={{ fontFamily:HELV, fontSize:9, letterSpacing:3, color:'#c9c9c9', textTransform:'uppercase', marginBottom:4 }}>{item.category}</div>
         <div style={{ fontFamily:IMP, fontSize:'clamp(15px,3.2vw,21px)', color:'#fff', letterSpacing:0.4, lineHeight:1 }}>{item.title}</div>
         <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:1, color:'#8f8f8f', marginTop:5 }}>{item.creator}</div>
       </div>
       <div style={{ position:'absolute', right:14, bottom:14, display:'flex', flexDirection:'column', gap:12, alignItems:'center' }}>
-        <button onClick={love} title="Love" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
-          <HeartIcon filled={loved} size={30} />
-          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)' }}>{fmtN(c.likes)}</span>
+        <button onClick={heartBtn} title="Love" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+          <span style={{ display:'block', transform: pop?'scale(1.4)':'scale(1)', transition:'transform 0.18s cubic-bezier(0.2,1.6,0.4,1)' }}><HeartIcon filled={loved} size={30} /></span>
+          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)', display:'block', transform: pop?'scale(1.3)':'scale(1)', transition:'transform 0.18s' }}>{fmtN(c.likes)}</span>
         </button>
         <button onClick={share} title="Share" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
           <span style={{ fontSize:21, color:'#fff', lineHeight:1, filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }}>↗</span>
           <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)' }}>{fmtN(c.shares)}</span>
+        </button>
+        <button onClick={followBtn} title={following?'Following':'Follow'} style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+          <span style={{ width:26, height:26, borderRadius:0, border:'2px solid #fff', background:following?'#fff':'transparent', color:following?'#000':'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:IMP, fontSize:15, lineHeight:1 }}>{following?'✓':'+'}</span>
+          <span style={{ fontFamily:IMP, fontSize:8.5, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)', letterSpacing:0.5 }}>{following?'FOLLOWING':'FOLLOW'}</span>
         </button>
       </div>
     </div>
@@ -1305,12 +1322,18 @@ function GuestPage({ setPage }) {
       <PageHeader setPage={setPage} subtitle="GALLERY" right={
         <button onClick={openVIP} style={{ background:'#fff', color:'#000', border:'none', padding:'9px 18px', borderRadius:0, fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>REQUEST ACCESS</button>
       } />
-      <Marquee bg="#0b0b0b" dur={80} text={'YOU’RE #' + waitlistNumber() + ' IN LINE FOR AUTOGRAFF      —      INVITATION-ONLY, EARNED NOT BOUGHT      —      CLAIM YOUR SPOT BEFORE THE DOORS CLOSE      —      '} />
+      <Marquee bg="#0b0b0b" dur={52} text={'YOU’RE #' + waitlistNumber() + ' IN LINE FOR AUTOGRAFF      —      INVITATION-ONLY, EARNED NOT BOUGHT      —      CLAIM YOUR SPOT BEFORE THE DOORS CLOSE      —      '} />
       <GalleryHero items={GALLERY} onOpen={setLightbox} />
       <Marquee dur={90} color="#cfcfcf" text={CATEGORIES.map(c => c.toUpperCase()).join('      ·      ') + '      ·      '} />
       <div style={{ padding:'10px 0 2px clamp(14px,3vw,40px)', flexShrink:0 }}>
         <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>— MOST LOVED</div>
         <FeaturedRail items={ranked} counts={counts} onView={setLightbox} onLove={onLove} onShare={onShare} />
+      </div>
+      <div style={{ margin:'12px clamp(14px,3vw,40px) 0', border:'1px solid rgba(255,255,255,0.14)', padding:'clamp(22px,4vw,34px)', textAlign:'center', flexShrink:0, background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 13px)' }}>
+        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#8f8f8f', textTransform:'uppercase', marginBottom:8 }}>The contest</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(28px,8vw,46px)', color:'#fff', letterSpacing:1, lineHeight:0.96 }}>POST TO WIN</div>
+        <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:10, maxWidth:420, marginLeft:'auto', marginRight:'auto', lineHeight:1.6 }}>Post your work. Collect love on the board. The most-loved pieces win.</div>
+        <button onClick={()=>setPage('photos')} style={{ marginTop:16, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'13px 34px', fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>POST NOW {'→'}</button>
       </div>
       <div style={{ margin:'8px clamp(14px,3vw,40px) 110px', borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:28, flexShrink:0 }}>
         <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5vw,30px)', color:'#fff', letterSpacing:0.5, lineHeight:1.05, maxWidth:520 }}>A gallery for work made to be seen.</div>
@@ -1412,9 +1435,17 @@ function StudioPage({ setPage }) {
   useEffect(()=>{bpmRef.current=bpm},[bpm]); useEffect(()=>{patRef.current=patterns},[patterns]);
   useEffect(()=>{mutRef.current=muted},[muted]); useEffect(()=>{soloRef.current=solo},[solo]);
   useEffect(()=>{volRef.current=volumes},[volumes]); useEffect(()=>{swingRef.current=swing},[swing]);
-  const start=()=>{
+  // iOS keeps the AudioContext silent until it's resumed AND a buffer is played
+  // inside a real user gesture — resume() alone is not enough on iPhone.
+  const unlock=()=>{
     if(!ctxRef.current) ctxRef.current=new(window.AudioContext||window.webkitAudioContext)();
-    const ctx=ctxRef.current; if(ctx.state==='suspended')ctx.resume();
+    const ctx=ctxRef.current;
+    try{ if(ctx.state!=='running') ctx.resume(); }catch(_){}
+    try{ const b=ctx.createBuffer(1,1,22050); const s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0); }catch(_){}
+    return ctx;
+  };
+  const start=()=>{
+    const ctx=unlock();
     stepRef.current=0; nextTimeRef.current=ctx.currentTime+0.05; setPlaying(true);
     const schedule=()=>{
       while(nextTimeRef.current<ctxRef.current.currentTime+0.1){
@@ -1435,6 +1466,8 @@ function StudioPage({ setPage }) {
   };
   const stop=()=>{setPlaying(false);setCurrentStep(-1);if(timerRef.current)clearTimeout(timerRef.current);};
   useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current);},[]);
+  // Unlock audio on the very first touch anywhere in Studio (iOS), not only on Play.
+  useEffect(()=>{ const h=()=>{try{unlock();}catch(_){}}; document.addEventListener('pointerdown',h,{once:true}); return()=>document.removeEventListener('pointerdown',h); },[]);
   const loadPreset=(name)=>{const pr=PRESETS[name];if(!pr)return;stop();
     const p={};TRACK_DEFS.forEach(t=>p[t.id]=(pr.patterns[t.id]||new Array(16).fill(0)).map(v=>!!v));
     // Sync refs synchronously so the scheduler plays the new beat immediately.
@@ -1803,6 +1836,7 @@ function VIPModal({ onClose, onJoin }) {
   const [social, setSocial] = useState('');
   const [bio, setBio] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [position, setPosition] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState('');
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -1813,16 +1847,18 @@ function VIPModal({ onClose, onJoin }) {
     setSubmitting(true);
     setErrMsg('');
     const payload = { name, email, phone, social, bio, ref: referredBy() };
+    let cnt = 0;
     try {
       const res = await fetch('/api/vip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Something went wrong. Please try again.');
       }
+      cnt = Number(data.count || 0);
     } catch (err) {
       // Keep a local backup so the signup is never lost, but tell the user if the server failed.
       try {
@@ -1835,11 +1871,12 @@ function VIPModal({ onClose, onJoin }) {
       return;
     }
     setSubmitting(false);
+    setPosition(1283000 + cnt);           // huge, unique, increments with every new joiner
     setSubmitted(true);
     onJoin();
     // Vercel Web Analytics custom event (no-op until Web Analytics is enabled on the project).
     try { if (typeof window !== 'undefined' && typeof window.va === 'function') window.va('event', { name: 'VIP Signup' }); } catch (_) {}
-    setTimeout(onClose, 3200);
+    setTimeout(onClose, 5200);
   };
   const field = { width:'100%', padding:'12px 14px', borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, fontFamily:'Georgia,serif', outline:'none', marginBottom:10 };
   const lbl = { display:'block', textAlign:'left', fontFamily:IMP, fontSize:9, letterSpacing:2, color:'#fff', marginBottom:5 };
@@ -1880,9 +1917,11 @@ function VIPModal({ onClose, onJoin }) {
         ) : (
           <div style={{ padding:'24px 0', textAlign:'center' }}>
             <div style={{ fontSize:42, marginBottom:14, color:'#3ad07a' }}>{'\u2713'}</div>
-            <div style={{ fontFamily:IMP, fontSize:24, letterSpacing:1, marginBottom:10 }}>YOU{'\u2019'}RE ON THE WAITING LIST</div>
+            <div style={{ fontFamily:IMP, fontSize:22, letterSpacing:1, marginBottom:14 }}>YOU{'\u2019'}RE ON THE WAITING LIST</div>
+            <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'rgba(255,255,255,0.55)', textTransform:'uppercase', marginBottom:4 }}>You{'\u2019'}re number</div>
+            <div style={{ fontFamily:IMP, fontSize:'clamp(36px,11vw,56px)', letterSpacing:1, color:'#fff', lineHeight:1, marginBottom:16 }}>#{position.toLocaleString()}</div>
             <div style={{ fontSize:13, lineHeight:1.55, color:'#fff', maxWidth:300, margin:'0 auto' }}>
-              {name ? name.split(' ')[0] + ', you' : 'You'}{'\u2019'}re in. We{'\u2019'}ll email you the second AUTOGRAFF hits the App Store {'\u2014'} plus the drop date and first look at the designs. No spam, ever.
+              {name ? name.split(' ')[0] + ', you' : 'You'}{'\u2019'}re in line. We{'\u2019'}ll email you the second AUTOGRAFF hits the App Store. No spam, ever.
             </div>
           </div>
         )}
