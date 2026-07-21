@@ -915,32 +915,39 @@ function PhotosPage({ setPage }) {
 function LeaderboardPage({ setPage }) {
   const [view,setView]=useState('photos'); // 'photos' | 'supporters'
   const [voted,setVoted]=useState({});
-  const [entries,setEntries]=useState(()=>SEED_PHOTOS.map(p=>({...p,votes:p.likes})).sort((a,b)=>b.votes-a.votes));
+  const [entries,setEntries]=useState([]);
   const [supporters,setSupporters]=useState([]);
   const me=myRef();
   useEffect(()=>{
     let active=true;
-    // Rank photos by real likes, and build the supporter ledger from liker scores.
-    Promise.all([
-      fetch('/api/photos').then(r=>r.ok?r.json():{photos:[]}).catch(()=>({photos:[]})),
-      fetch('/api/likes').then(r=>r.ok?r.json():{likes:{},likers:{},names:{}}).catch(()=>({likes:{},likers:{},names:{}})),
-    ]).then(([pd,ld])=>{
-      if(!active) return;
-      const seedIds=new Set(SEED_PHOTOS.map(p=>p.id));
-      const uploaded=Array.isArray(pd.photos)?pd.photos.filter(p=>p&&p.src&&!seedIds.has(p.id)):[];
-      const deltas=(ld&&ld.likes)||{};
-      const all=[...uploaded,...SEED_PHOTOS].map(p=>({...p,votes:(p.likes||0)+Number(deltas[p.id]||0)}));
-      all.sort((a,b)=>b.votes-a.votes);
-      setEntries(all);
-      const scores=(ld&&ld.likers)||{}; const names=(ld&&ld.names)||{};
-      const sup=Object.keys(scores).map(uid=>({uid,score:Number(scores[uid]||0),name:names[uid]||('guest_'+uid)}));
-      sup.sort((a,b)=>b.score-a.score);
-      setSupporters(sup);
-    });
-    return()=>{active=false;};
+    // The board is the gallery's scoreboard: every curated piece + upload, ranked by real
+    // likes, with shares alongside. Polled so a new like/share shows up on its own.
+    const load=()=>{
+      Promise.all([
+        fetch('/api/photos').then(r=>r.ok?r.json():{photos:[]}).catch(()=>({photos:[]})),
+        fetch('/api/likes').then(r=>r.ok?r.json():{likes:{},shares:{},likers:{},names:{}}).catch(()=>({likes:{},shares:{},likers:{},names:{}})),
+      ]).then(([pd,ld])=>{
+        if(!active) return;
+        const seedIds=new Set(SEED_PHOTOS.map(p=>p.id));
+        const uploaded=Array.isArray(pd.photos)?pd.photos.filter(p=>p&&p.src&&!seedIds.has(p.id)):[];
+        const gallery=GALLERY.map(g=>({id:g.id,src:g.src,title:g.title,user:(g.creator||'').replace(/^@/,''),likes:0}));
+        const deltas=(ld&&ld.likes)||{}; const shareD=(ld&&ld.shares)||{};
+        const all=[...gallery,...uploaded,...SEED_PHOTOS].map(p=>({...p,votes:(p.likes||0)+Number(deltas[p.id]||0),shares:Number(shareD[p.id]||0)}));
+        all.sort((a,b)=>b.votes-a.votes);
+        setEntries(all);
+        const scores=(ld&&ld.likers)||{}; const names=(ld&&ld.names)||{};
+        const sup=Object.keys(scores).map(uid=>({uid,score:Number(scores[uid]||0),name:names[uid]||('guest_'+uid)}));
+        sup.sort((a,b)=>b.score-a.score);
+        setSupporters(sup);
+      });
+    };
+    load();
+    const poll=setInterval(load,5000);
+    return()=>{active=false;clearInterval(poll);};
   },[]);
   const maxVotes=entries[0]?.votes||1;
   const totalVotes=entries.reduce((s,e)=>s+e.votes,0);
+  const totalShares=entries.reduce((s,e)=>s+(e.shares||0),0);
   const maxScore=supporters.reduce((m,s)=>Math.max(m,s.score),1);
   const totalGiven=supporters.reduce((s,e)=>s+e.score,0);
   const handleVote=(id)=>{if(voted[id])return;setVoted(p=>({...p,[id]:true}));
@@ -950,7 +957,7 @@ function LeaderboardPage({ setPage }) {
     setSupporters(p=>{const has=p.some(s=>s.uid===me);
       const next=has?p.map(s=>s.uid===me?{...s,score:s.score+1}:s):[...p,{uid:me,score:1,name:myHandle()}];
       return next.sort((a,b)=>b.score-a.score);});};
-  const medal=(i)=>i===0?'\uD83E\uDD47':i===1?'\uD83E\uDD48':i===2?'\uD83E\uDD49':`${i+1}`;
+  const medal=(i)=>String(i+1).padStart(2,'0');
   const barColor=(i)=>i===0?'#fff':i===1?'rgba(255,255,255,0.55)':i===2?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.25)';
   const fmtV=(v)=>v>=1000?(v/1000).toFixed(1)+'K':v;
   const stagnant=supporters.filter(s=>s.score===0);
@@ -962,7 +969,7 @@ function LeaderboardPage({ setPage }) {
           We support the liker, we like the supporter. Give love to climb — lurk and you sink.
         </p>
         <div style={{ display:'flex', gap:6 }}>
-          {[{k:'photos',l:'\uD83D\uDCF8 MOST LIKED'},{k:'supporters',l:'\u2764\uFE0F TOP SUPPORTERS'}].map(t=>(
+          {[{k:'photos',l:'MOST LIKED'},{k:'supporters',l:'TOP SUPPORTERS'}].map(t=>(
             <button key={t.k} onClick={()=>setView(t.k)} style={{
               flex:1, padding:'9px 10px', borderRadius:0, border:'none', cursor:'pointer',
               fontFamily:IMP, fontSize:11, letterSpacing:1,
@@ -989,16 +996,20 @@ function LeaderboardPage({ setPage }) {
                     <div style={{ height:'100%', background:barColor(i), borderRadius:0, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
-                <div style={{ textAlign:'right', minWidth:44 }}>
+                <div style={{ textAlign:'right', minWidth:40 }}>
                   <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700 }}>{fmtV(e.votes)}</div>
-                  <div style={{ fontSize:8, color:'#fff', letterSpacing:2 }}>LIKES</div>
+                  <div style={{ fontSize:8, color:'rgba(255,255,255,0.5)', letterSpacing:2 }}>LIKES</div>
+                </div>
+                <div style={{ textAlign:'right', minWidth:38 }}>
+                  <div style={{ fontFamily:IMP, fontSize:15, fontWeight:700, color:'#cfcfcf' }}>{fmtV(e.shares||0)}</div>
+                  <div style={{ fontSize:8, color:'rgba(255,255,255,0.5)', letterSpacing:2 }}>SHARES</div>
                 </div>
                 <button onClick={()=>handleVote(e.id)} disabled={!!voted[key]} style={{
                   padding:'6px 12px', borderRadius:0, fontSize:10, cursor:voted[key]?'default':'pointer',
                   fontFamily:IMP, letterSpacing:1,
                   background:voted[key]?'rgba(255,255,255,0.1)':'transparent',
                   border:`1px solid ${voted[key]?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.35)'}`,
-                  color:voted[key]?'rgba(255,255,255,0.5)':'#fff' }}>{voted[key]?'\u2713 LIKED':'\u2764\uFE0F LIKE'}</button>
+                  color:voted[key]?'rgba(255,255,255,0.5)':'#fff' }}>{voted[key]?'LIKED':'LIKE'}</button>
               </div>
             );
           })}
@@ -1034,13 +1045,13 @@ function LeaderboardPage({ setPage }) {
           })}
           {stagnant.length>0 && (
             <div style={{ marginTop:18, padding:'14px 16px', borderRadius:0, background:'rgba(229,57,53,0.06)', border:'1px dashed rgba(229,57,53,0.35)' }}>
-              <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:1, color:'#e53935' }}>{'\uD83E\uDD87'} THE STAGNANT ({stagnant.length})</div>
+              <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:1, color:'#e53935' }}>THE STAGNANT ({stagnant.length})</div>
               <div style={{ fontSize:10, color:'#fff', margin:'4px 0 8px' }}>Showed up, watched the show, never gave a like. Zero love. Do better.</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {stagnant.map(s=>(
                   <span key={s.uid} style={{ fontSize:10, fontFamily:IMP, letterSpacing:0.5, padding:'4px 8px', borderRadius:0,
                     background:s.uid===me?'#e53935':'rgba(255,255,255,0.08)', color:s.uid===me?'#fff':'rgba(255,255,255,0.6)' }}>
-                    @{s.name}{s.uid===me?' (YOU 💀)':''}
+                    @{s.name}{s.uid===me?' (YOU)':''}
                   </span>
                 ))}
               </div>
@@ -1053,7 +1064,7 @@ function LeaderboardPage({ setPage }) {
         background:'linear-gradient(transparent, rgba(0,0,0,0.9) 35%, #000)',
         display:'flex', justifyContent:'space-around', zIndex:10 }}>
         {(view==='photos'
-          ? [{l:'TOTAL LIKES',v:fmtV(totalVotes)},{l:'TOP PHOTO',v:entries[0]?.title||'-'},{l:'BY',v:entries[0]?'@'+entries[0].user:'-'}]
+          ? [{l:'TOTAL LIKES',v:fmtV(totalVotes)},{l:'TOTAL SHARES',v:fmtV(totalShares)},{l:'TOP',v:entries[0]?.title||'-'}]
           : [{l:'LOVE GIVEN',v:fmtV(totalGiven)},{l:'TOP PATRON',v:supporters[0]?'@'+supporters[0].name:'-'},{l:'STAGNANT',v:stagnant.length}]
         ).map(s=>(
           <div key={s.l} style={{ textAlign:'center' }}>
@@ -1114,7 +1125,7 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
       onPointerDown={down} onPointerMove={move} onPointerUp={up}
       onMouseEnter={e => { const cc=e.currentTarget; cc.style.transform='scale(1.035)'; cc.style.boxShadow='0 28px 66px rgba(0,0,0,0.72)'; cc.style.filter='brightness(1.07)'; }}
       onMouseLeave={e => { const cc=e.currentTarget; cc.style.transform='scale(1)'; cc.style.boxShadow='0 4px 18px rgba(0,0,0,0.45)'; cc.style.filter='none'; }}
-      style={{ width:'clamp(300px,86vw,760px)', aspectRatio:'16 / 9', flexShrink:0, position:'relative', overflow:'hidden', borderRadius:0, cursor:'pointer', background:'#070707', userSelect:'none', WebkitUserSelect:'none', WebkitTapHighlightColor:'transparent', boxShadow:'0 4px 18px rgba(0,0,0,0.45)', transition:'transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .34s ease, filter .34s ease' }}>
+      style={{ width:'clamp(260px,74vw,600px)', aspectRatio:'16 / 9', flexShrink:0, position:'relative', overflow:'hidden', borderRadius:0, cursor:'pointer', background:'#070707', userSelect:'none', WebkitUserSelect:'none', WebkitTapHighlightColor:'transparent', boxShadow:'0 4px 18px rgba(0,0,0,0.45)', transition:'transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .34s ease, filter .34s ease' }}>
       <img src={item.src} alt={item.title} loading="lazy" draggable={false} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', background:'#070707', pointerEvents:'none' }} />
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, transparent 44%, rgba(0,0,0,0.82) 100%)' }} />
       <FloatingHearts bursts={bursts} />
@@ -1177,7 +1188,7 @@ function GalleryHero({ items, onOpen }) {
   const cur = items[idx] || items[0];
   if (!cur) return null;
   return (
-    <div style={{ position:'relative', width:'100%', height:'clamp(190px,36vh,480px)', overflow:'hidden', background:'#000', flexShrink:0 }}>
+    <div style={{ position:'relative', width:'100%', height:'clamp(150px,26vh,400px)', overflow:'hidden', background:'#000', flexShrink:0 }}>
       {items.map((it, i) => (
         <div key={it.id} aria-hidden={i!==idx} style={{ position:'absolute', inset:0, opacity:i===idx?1:0, transition:'opacity 1.2s ease' }}>
           <img src={it.src} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', filter:'blur(34px) brightness(0.42)', transform:'scale(1.18)' }} />
@@ -1297,8 +1308,8 @@ function GuestPage({ setPage }) {
       <Marquee bg="#0b0b0b" dur={80} text={'YOU’RE #' + waitlistNumber() + ' IN LINE FOR AUTOGRAFF      —      INVITATION-ONLY, EARNED NOT BOUGHT      —      CLAIM YOUR SPOT BEFORE THE DOORS CLOSE      —      '} />
       <GalleryHero items={GALLERY} onOpen={setLightbox} />
       <Marquee dur={90} color="#cfcfcf" text={CATEGORIES.map(c => c.toUpperCase()).join('      ·      ') + '      ·      '} />
-      <div style={{ padding:'14px 0 4px clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'#fff' }}>— MOST LOVED</div>
+      <div style={{ padding:'10px 0 2px clamp(14px,3vw,40px)', flexShrink:0 }}>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>— MOST LOVED</div>
         <FeaturedRail items={ranked} counts={counts} onView={setLightbox} onLove={onLove} onShare={onShare} />
       </div>
       <div style={{ margin:'8px clamp(14px,3vw,40px) 110px', borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:28, flexShrink:0 }}>
