@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
-// resend is imported lazily inside sendConfirmation() so this function never crashes on
-// load if the package can't be traced — a signup must never fail because of email.
+// Confirmation email is sent via Resend's REST API with built-in fetch (no npm
+// dependency to bundle), and is fully guarded — a signup must never fail on email.
 
 /*
  * VIP waiting list enrollment.
@@ -38,8 +38,6 @@ async function sendConfirmation(record) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, reason: 'RESEND_API_KEY not set' };
   try {
-    const { Resend } = await import('resend');
-    const resend = new Resend(apiKey);
     const from = process.env.RESEND_FROM || 'AUTOGRAFF <onboarding@resend.dev>';
     const first = String(record.name || '').trim().split(/\s+/)[0];
     const hi = first ? `${first},` : '';
@@ -56,10 +54,14 @@ async function sendConfirmation(record) {
       `<p style="margin:0 0 28px;color:#b3b3b3">No spam, ever.</p>` +
       `<p style="margin:0;color:#666;letter-spacing:2px;font-size:12px">— AUTOGRAFF</p>` +
       `</div>`;
-    const { data, error } = await resend.emails.send({
-      from, to: record.email, subject: "You're on the AUTOGRAFF list", text, html,
+    // Resend REST API via built-in fetch — no npm dependency to bundle.
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: record.email, subject: "You're on the AUTOGRAFF list", text, html }),
     });
-    if (error) return { sent: false, reason: error.message || String(error) };
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) return { sent: false, reason: data?.message || `HTTP ${resp.status}` };
     return { sent: true, id: data?.id };
   } catch (e) {
     console.error('sendConfirmation failed', e);
@@ -116,6 +118,6 @@ export default async function handler(req, res) {
   await kv.lpush('vip_signups', record);
   const count = await kv.llen('vip_signups');
   notifySignup(record, count).catch(() => {});
-  const email = await sendConfirmation(record);
-  return res.status(200).json({ ok: true, count, email });
+  const emailResult = await sendConfirmation(record);
+  return res.status(200).json({ ok: true, count, email: emailResult });
 }
