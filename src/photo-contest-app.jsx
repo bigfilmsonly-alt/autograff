@@ -895,7 +895,7 @@ function LeaderboardPage({ setPage }) {
       const next=has?p.map(s=>s.uid===me?{...s,score:s.score+1}:s):[...p,{uid:me,score:1,name:myHandle()}];
       return next.sort((a,b)=>b.score-a.score);});};
   const medal=(i)=>i===0?'\uD83E\uDD47':i===1?'\uD83E\uDD48':i===2?'\uD83E\uDD49':`${i+1}`;
-  const barColor=(i)=>i===0?'#000':i===1?'rgba(0,0,0,0.45)':i===2?'rgba(0,0,0,0.3)':'rgba(0,0,0,0.12)';
+  const barColor=(i)=>i===0?'#fff':i===1?'rgba(255,255,255,0.55)':i===2?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.25)';
   const fmtV=(v)=>v>=1000?(v/1000).toFixed(1)+'K':v;
   const stagnant=supporters.filter(s=>s.score===0);
   return (
@@ -910,26 +910,26 @@ function LeaderboardPage({ setPage }) {
             <button key={t.k} onClick={()=>setView(t.k)} style={{
               flex:1, padding:'9px 10px', borderRadius:20, border:'none', cursor:'pointer',
               fontFamily:IMP, fontSize:11, letterSpacing:1,
-              background:view===t.k?'#000':'rgba(0,0,0,0.05)', color:view===t.k?'#fff':'rgba(0,0,0,0.5)',
+              background:view===t.k?'#fff':'rgba(255,255,255,0.08)', color:view===t.k?'#000':'rgba(255,255,255,0.6)',
               transition:'all 0.2s' }}>{t.l}</button>
           ))}
         </div>
       </div>
 
       {view==='photos' ? (
-        <div style={{ flex:1, overflow:'auto', padding:'8px 18px 120px' }}>
+        <div style={{ flex:1, overflow:'auto', padding:'8px 18px 190px' }}>
           {entries.map((e,i)=>{
             const key=e.id;const pct=Math.round(e.votes/maxVotes*100);
             return (
-              <div key={e.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
-                <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(0,0,0,0.3)' }}>{medal(i)}</span>
+              <div key={e.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(255,255,255,0.5)' }}>{medal(i)}</span>
                 <div style={{ width:60, height:44, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
                   <img src={e.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>{e.title}</div>
                   <div style={{ fontSize:10, color:'#fff' }}>@{e.user}</div>
-                  <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
+                  <div style={{ height:3, background:'rgba(255,255,255,0.12)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
                     <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
@@ -940,15 +940,15 @@ function LeaderboardPage({ setPage }) {
                 <button onClick={()=>handleVote(e.id)} disabled={!!voted[key]} style={{
                   padding:'6px 12px', borderRadius:8, fontSize:10, cursor:voted[key]?'default':'pointer',
                   fontFamily:IMP, letterSpacing:1,
-                  background:voted[key]?'rgba(0,0,0,0.06)':'transparent',
-                  border:`1px solid ${voted[key]?'rgba(0,0,0,0.2)':'rgba(0,0,0,0.15)'}`,
-                  color:voted[key]?'rgba(0,0,0,0.4)':'#000' }}>{voted[key]?'\u2713 LIKED':'\u2764\uFE0F LIKE'}</button>
+                  background:voted[key]?'rgba(255,255,255,0.1)':'transparent',
+                  border:`1px solid ${voted[key]?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.35)'}`,
+                  color:voted[key]?'rgba(255,255,255,0.5)':'#fff' }}>{voted[key]?'\u2713 LIKED':'\u2764\uFE0F LIKE'}</button>
               </div>
             );
           })}
         </div>
       ) : (
-        <div style={{ flex:1, overflow:'auto', padding:'8px 18px 120px' }}>
+        <div style={{ flex:1, overflow:'auto', padding:'8px 18px 190px' }}>
           {supporters.filter(s=>s.score>0).length===0 && (
             <div style={{ textAlign:'center', padding:'40px 20px', color:'#fff', fontSize:12 }}>
               No supporters yet. Be the first to give love — go like some photos.
@@ -957,15 +957,15 @@ function LeaderboardPage({ setPage }) {
           {supporters.filter(s=>s.score>0).map((s,i)=>{
             const pct=Math.round(s.score/maxScore*100); const mine=s.uid===me;
             return (
-              <div key={s.uid} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
-                <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(0,0,0,0.3)' }}>{medal(i)}</span>
-                <div style={{ width:44, height:44, borderRadius:'50%', flexShrink:0, background:i===0?'#000':'rgba(0,0,0,0.08)',
+              <div key={s.uid} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+                <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(255,255,255,0.5)' }}>{medal(i)}</span>
+                <div style={{ width:44, height:44, borderRadius:'50%', flexShrink:0, background:i===0?'#fff':'rgba(255,255,255,0.12)',
                   display:'flex', alignItems:'center', justifyContent:'center', fontFamily:IMP, fontSize:16,
-                  color:i===0?'#fff':'rgba(0,0,0,0.5)' }}>{(s.name||'?').replace(/^guest_/,'').slice(0,2).toUpperCase()}</div>
+                  color:i===0?'#000':'rgba(255,255,255,0.7)' }}>{(s.name||'?').replace(/^guest_/,'').slice(0,2).toUpperCase()}</div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>@{s.name}{mine&&<span style={{ fontSize:9, color:'#3ad07a', marginLeft:6 }}>YOU</span>}</div>
                   <div style={{ fontSize:10, color:'#fff' }}>{i===0?'Patron of the day':'Supporter'}</div>
-                  <div style={{ height:3, background:'rgba(0,0,0,0.06)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
+                  <div style={{ height:3, background:'rgba(255,255,255,0.12)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
                     <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
@@ -983,7 +983,7 @@ function LeaderboardPage({ setPage }) {
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {stagnant.map(s=>(
                   <span key={s.uid} style={{ fontSize:10, fontFamily:IMP, letterSpacing:0.5, padding:'4px 8px', borderRadius:14,
-                    background:s.uid===me?'#e53935':'rgba(0,0,0,0.06)', color:s.uid===me?'#fff':'rgba(0,0,0,0.5)' }}>
+                    background:s.uid===me?'#e53935':'rgba(255,255,255,0.08)', color:s.uid===me?'#fff':'rgba(255,255,255,0.6)' }}>
                     @{s.name}{s.uid===me?' (YOU 💀)':''}
                   </span>
                 ))}
@@ -993,8 +993,8 @@ function LeaderboardPage({ setPage }) {
         </div>
       )}
 
-      <div style={{ position:'absolute', bottom:56, left:0, right:0, padding:'20px clamp(14px,3vw,40px) 8px',
-        background:'linear-gradient(transparent, rgba(255,255,255,0.95) 30%, #fff)',
+      <div style={{ position:'absolute', bottom:'calc(118px + env(safe-area-inset-bottom, 0px))', left:0, right:0, padding:'20px clamp(14px,3vw,40px) 8px',
+        background:'linear-gradient(transparent, rgba(0,0,0,0.9) 35%, #000)',
         display:'flex', justifyContent:'space-around', zIndex:10 }}>
         {(view==='photos'
           ? [{l:'TOTAL LIKES',v:fmtV(totalVotes)},{l:'TOP PHOTO',v:entries[0]?.title||'-'},{l:'BY',v:entries[0]?'@'+entries[0].user:'-'}]
