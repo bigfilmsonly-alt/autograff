@@ -13,9 +13,14 @@ import { kv } from '@vercel/kv';
 export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
+      // period: all (default) | daily | monthly — likes + supporter scores are time-bucketed.
+      const period = String(req.query?.period || 'all');
+      const now = new Date();
+      const suf = period === 'daily' ? (':d:' + now.toISOString().slice(0, 10))
+        : period === 'monthly' ? (':m:' + now.toISOString().slice(0, 7)) : '';
       const [likes, likers, names, shares] = await Promise.all([
-        kv.hgetall('photo_likes'),
-        kv.hgetall('liker_scores'),
+        kv.hgetall('photo_likes' + suf),
+        kv.hgetall('liker_scores' + suf),
         kv.hgetall('liker_names'),
         kv.hgetall('photo_shares'),
       ]);
@@ -49,10 +54,17 @@ export default async function handler(req, res) {
       }
       // A tap = a heart. Rapid taps arrive batched as `count` (capped to bound abuse).
       const count = Math.min(50, Math.max(1, parseInt(body.count, 10) || 1));
+      const now = new Date();
+      const day = ':d:' + now.toISOString().slice(0, 10);
+      const mon = ':m:' + now.toISOString().slice(0, 7);
       const likes = await kv.hincrby('photo_likes', id, count);
+      await kv.hincrby('photo_likes' + day, id, count);
+      await kv.hincrby('photo_likes' + mon, id, count);
       let likerScore;
       if (uid) {
         likerScore = await kv.hincrby('liker_scores', uid, count);
+        await kv.hincrby('liker_scores' + day, uid, count);
+        await kv.hincrby('liker_scores' + mon, uid, count);
         if (name) await kv.hset('liker_names', { [uid]: name });
       }
       return res.status(200).json({ id, likes, likerScore });
