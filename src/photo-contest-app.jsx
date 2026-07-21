@@ -12,21 +12,25 @@ if (typeof document !== 'undefined') {
     @media (min-width:769px) {
       body { background: #000; }
     }
-    @keyframes floatHeart {
-      0%   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
-      60%  { opacity:0.9; }
-      100% { opacity:0; transform:translateX(-50%) translateY(-88px) scale(1.6); }
+    @keyframes heartBurst {
+      0%   { opacity:0; transform:translate(-50%,-50%) scale(0.2) rotate(0deg); }
+      16%  { opacity:1; transform:translate(-50%,-50%) scale(1.12) rotate(0deg); }
+      100% { opacity:0; transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.42) rotate(var(--r)); }
     }
     @keyframes marqueeText {
       0%   { transform: translateX(0); }
       100% { transform: translateX(-50%); }
     }
+    @keyframes heroZoom {
+      from { transform: scale(1.02); }
+      to   { transform: scale(1.11); }
+    }
     input[type="range"] {
-      -webkit-appearance: none; height:4px; background:rgba(0,0,0,0.15); border-radius:2px; outline:none;
+      -webkit-appearance: none; height:4px; background:rgba(0,0,0,0.15); border-radius:0; outline:none;
     }
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance:none; width:16px; height:16px; background:#fff; border:2px solid #000;
-      border-radius:50%; cursor:pointer;
+      border-radius:0; cursor:pointer;
     }
     /* Phone rotated to landscape. Tests "short viewport", not device class:
        (min-width:769px) would also match a landscape iPhone (844px wide), and a
@@ -61,7 +65,24 @@ if (typeof document !== 'undefined') {
 }
 
 /* ══════════════════════════ CONSTANTS ══════════════════════════ */
-const HEART_EMOJIS = ['\u2764\uFE0F','\uD83E\uDDE1','\uD83D\uDC9B','\uD83D\uDC9A','\uD83D\uDC99','\uD83D\uDC9C','\uD83D\uDDA4','\uD83D\uDC96','\uD83D\uDC9D'];
+// Refined heart burst \u2014 crisp white marks, generous in number, brief in motion.
+const HEART_PATH = 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+function makeHeartBurst(x, y, count) {
+  const n = count || (12 + Math.floor(Math.random() * 5));
+  return Array.from({ length: n }, (_, i) => {
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 0.92;
+    const dist = 44 + Math.random() * 94;
+    return {
+      id: Date.now() + i + Math.random(),
+      x, y,
+      size: 12 + Math.random() * 20,
+      dur: 0.7 + Math.random() * 0.32,
+      tx: Math.cos(ang) * dist,
+      ty: Math.sin(ang) * dist - 12,
+      r: (Math.random() - 0.5) * 44,
+    };
+  });
+}
 
 const makePlaceholder = (c1, c2, label, shapes = '') => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400">
@@ -108,7 +129,7 @@ const MOCK_MEMBERS = import.meta.env.DEV ? [
 ] : [];
 
 const NAV_ITEMS = [
-  { key:'guest',       label:'EXPLORE',  icon:'\uD83D\uDD0D' },
+  { key:'guest',       label:'GALLERY',  icon:'\uD83D\uDD0D' },
   { key:'photos',      label:'PHOTOS',   icon:'\uD83D\uDDBC' },
   { key:'leaderboard', label:'BOARD',    icon:'\uD83C\uDFC6' },
   { key:'members',     label:'MEMBERS',  icon:'\uD83D\uDC65' },
@@ -248,19 +269,24 @@ function playSound(ctx, track, time, vol) {
 function useFloatingHearts() {
   const [bursts, setBursts] = useState([]);
   const spawn = useCallback((x, y) => {
-    const h = Array.from({ length: 5 }, (_, i) => ({
-      id: Date.now() + i + Math.random(), x: x + (Math.random() - 0.5) * 44, y: y - 10,
-      size: 13 + Math.random() * 14, dur: 1.1 + Math.random() * 0.9,
-      emoji: HEART_EMOJIS[Math.floor(Math.random() * HEART_EMOJIS.length)],
-    }));
+    const h = makeHeartBurst(x, y);
     setBursts(prev => [...prev, ...h]);
-    setTimeout(() => setBursts(prev => prev.filter(b => !h.includes(b))), 2600);
+    setTimeout(() => setBursts(prev => prev.filter(b => !h.includes(b))), 1300);
   }, []);
   return { bursts, spawn };
 }
 
 /* ══════════════════════════ SMALL COMPONENTS ══════════════════════════ */
 const IMP = "Impact,'Arial Narrow',sans-serif";
+const HELV = "Helvetica,'Helvetica Neue',Arial,sans-serif";
+/* A stable, absurd waitlist position per visitor — gamified hype, not a real count. */
+function waitlistNumber() {
+  try {
+    let n = localStorage.getItem('autograff_waitnum');
+    if (!n) { n = String(1000000 + Math.floor(Math.random() * 3240000)); localStorage.setItem('autograff_waitnum', n); }
+    return Number(n).toLocaleString();
+  } catch (_) { return '1,284,309'; }
+}
 
 /* Opens the VIP modal from anywhere (bypasses the auto-popup gates). */
 const openVIP = () => { try { window.dispatchEvent(new Event('open-vip')); } catch (_) {} };
@@ -284,10 +310,25 @@ function myHandle() {
   } catch (_) { return 'guest'; }
 }
 /* Record a like: bumps the photo AND this visitor's supporter score. */
-function sendLike(id) {
+const _likeQ = {}; const _likeT = {};
+function sendLike(id, n = 1) {
+  const key = String(id);
+  _likeQ[key] = (_likeQ[key] || 0) + n;
+  clearTimeout(_likeT[key]);
+  // Collapse rapid taps into a single POST that carries the accumulated count.
+  _likeT[key] = setTimeout(() => {
+    const count = _likeQ[key]; delete _likeQ[key];
+    try {
+      fetch('/api/likes', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ id, uid: myRef(), name: myHandle(), count }) });
+    } catch (_) {}
+  }, 400);
+}
+/* Record a share (curated-gallery + feed both feed the leaderboard). */
+function sendShare(id) {
   try {
     fetch('/api/likes', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ id, uid: myRef(), name: myHandle() }) });
+      body: JSON.stringify({ id, action:'share' }) });
   } catch (_) {}
 }
 /* Per-visitor set of photo ids they've already liked (Instagram-style filled heart persists). */
@@ -323,7 +364,7 @@ async function shareAutograff(text) {
   try { window.location.href = `sms:?&body=${encodeURIComponent(message + ' ' + url)}`; } catch (_) {}
 }
 
-/* Floating "JOIN VIP" pill shown above the NavBar on every non-splash page. */
+/* Floating "WAITING LIST" pill shown above the NavBar on every non-splash page. */
 function VIPFab() {
   const [joined, setJoined] = useState(false);
   useEffect(() => {
@@ -338,15 +379,15 @@ function VIPFab() {
       bottom:'calc(72px + env(safe-area-inset-bottom, 0px))',
       display:'flex', alignItems:'center', gap:7,
       background:'#000', color:'#fff', border:'1px solid rgba(255,255,255,0.15)',
-      borderRadius:24, padding:'11px 18px', cursor:'pointer',
+      borderRadius:0, padding:'11px 18px', cursor:'pointer',
       fontFamily:IMP, fontSize:12, letterSpacing:2,
       boxShadow:'0 6px 22px rgba(0,0,0,0.28)', WebkitTapHighlightColor:'transparent',
     }}
       onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
       onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
     >
-      <span style={{ fontSize:13 }}>{joined ? '\u2713' : '\u2605'}</span>
-      {joined ? 'VIP LIST' : 'JOIN VIP'}
+      {joined && <span style={{ fontSize:13 }}>{'\u2713'}</span>}
+      {joined ? 'ON THE LIST' : 'WAITING LIST'}
     </button>
   );
 }
@@ -354,22 +395,22 @@ function VIPFab() {
 /* App Store "coming soon" band — launch framing + VIP CTA. */
 function AppStoreBanner({ style }) {
   return (
-    <div style={{ background:'#000', color:'#fff', borderRadius:14, padding:'24px 22px', textAlign:'center',
+    <div style={{ background:'#000', color:'#fff', borderRadius:0, padding:'24px 22px', textAlign:'center',
       backgroundImage:'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 12px)',
       border:'1px solid rgba(255,255,255,0.08)', ...style }}>
       <div style={{ fontSize:26, marginBottom:8 }}>{'\uD83D\uDCF1'}</div>
       <div style={{ fontFamily:IMP, fontSize:10, letterSpacing:5, color:'#fff', marginBottom:8 }}>COMING SOON TO iOS</div>
       <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5.5vw,26px)', letterSpacing:1, lineHeight:1.1, marginBottom:10 }}>THE APP DROPS<br/>ON THE APP STORE</div>
       <div style={{ fontSize:12.5, lineHeight:1.55, color:'#fff', maxWidth:320, margin:'0 auto 18px' }}>
-        AUTOGRAFF is launching on iPhone. Join the VIP list and we{'\u2019'}ll notify you the moment it{'\u2019'}s live {'\u2014'} plus the drop date and first look at the designs.
+        AUTOGRAFF is launching on iPhone. Join the waiting list and we{'\u2019'}ll notify you the moment it{'\u2019'}s live {'\u2014'} plus the drop date and first look at the designs.
       </div>
       <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
-        <button onClick={openVIP} style={{ padding:'12px 22px', border:'none', borderRadius:10, background:'#fff', color:'#000',
-          fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>{'\u2605'} JOIN THE VIP LIST</button>
-        <button onClick={()=>shareAutograff()} style={{ padding:'12px 20px', borderRadius:10, background:'transparent', color:'#fff',
+        <button onClick={openVIP} style={{ padding:'12px 22px', border:'none', borderRadius:0, background:'#fff', color:'#000',
+          fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>JOIN THE WAITING LIST</button>
+        <button onClick={()=>shareAutograff()} style={{ padding:'12px 20px', borderRadius:0, background:'transparent', color:'#fff',
           border:'1px solid rgba(255,255,255,0.25)', fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>{'\u2197'} SHARE</button>
       </div>
-      <div style={{ marginTop:14, display:'inline-flex', alignItems:'center', gap:7, padding:'7px 14px', borderRadius:8,
+      <div style={{ marginTop:14, display:'inline-flex', alignItems:'center', gap:7, padding:'7px 14px', borderRadius:0,
         border:'1px solid rgba(255,255,255,0.16)', background:'rgba(255,255,255,0.04)' }}>
         <span style={{ fontSize:16 }}>{'\uF8FF'}</span>
         <div style={{ textAlign:'left', lineHeight:1.1 }}>
@@ -385,8 +426,13 @@ function FloatingHearts({ bursts }) {
   return (
     <div style={{ position:'absolute', inset:0, pointerEvents:'none', zIndex:50, overflow:'hidden' }}>
       {bursts.map(h => (
-        <span key={h.id} style={{ position:'absolute', left:h.x, top:h.y, fontSize:h.size,
-          animation:`floatHeart ${h.dur}s ease-out forwards`, pointerEvents:'none' }}>{h.emoji}</span>
+        <svg key={h.id} viewBox="0 0 24 24" width={h.size} height={h.size} aria-hidden="true"
+          style={{ position:'absolute', left:h.x, top:h.y,
+            '--tx':`${h.tx}px`, '--ty':`${h.ty}px`, '--r':`${h.r}deg`,
+            animation:`heartBurst ${h.dur}s cubic-bezier(0.22,0.61,0.36,1) forwards`,
+            filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.45))', pointerEvents:'none' }}>
+          <path d={HEART_PATH} fill="#ff2d55" />
+        </svg>
       ))}
     </div>
   );
@@ -399,12 +445,6 @@ function LogoButton({ setPage }) {
       onMouseEnter={e => e.currentTarget.style.transform='scale(1.08)'}
       onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}>
       <img src={LOGO_URI} alt="logo" style={{ height:'100%', width:'auto', display:'block' }} />
-      {/* animated paint droplet aligned to the mark's drip tip (48.8%, 91.3%) */}
-      <span className="at-drop" aria-hidden="true" style={{
-        position:'absolute', left:'48.8%', top:'87%', width:'20%', aspectRatio:'0.82',
-        background:'#fff', borderRadius:'48% 48% 46% 46% / 34% 34% 66% 66%',
-        transformOrigin:'top center', animation:'atDrip 3.2s ease-in infinite',
-        pointerEvents:'none', willChange:'transform, opacity' }} />
     </span>
   );
 }
@@ -428,8 +468,8 @@ function PageHeader({ setPage, subtitle, right }) {
 /* Instagram-style heart: outline until liked, then filled red. */
 function HeartIcon({ filled, size = 26 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display:'block', filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.55))', transition:'transform 0.2s' }}
-      fill={filled ? '#e53935' : 'none'} stroke={filled ? '#e53935' : '#fff'} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display:'block', filter:'drop-shadow(0 2px 5px rgba(0,0,0,0.4))', transition:'transform 0.2s' }}
+      fill={filled ? '#ff2d55' : '#ffffff'} stroke="none">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
@@ -442,14 +482,13 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
   const likes = likeCounts[photo.id] ?? photo.likes;
   const fmtLikes = likes >= 1000 ? (likes/1000).toFixed(1)+'K' : likes;
 
-  const handleLike = (e) => {
-    e.stopPropagation();
-    setPop(true); setTimeout(() => setPop(false), 220);
-    if (liked) return; // one like per photo, Instagram-style
-    setLiked(true); markLiked(photo.id);
+  // Tap anywhere on the photo = love. Every tap bursts hearts at the point and adds a like.
+  const love = (e) => {
     const rect = e.currentTarget.closest('[data-card]').getBoundingClientRect();
-    onLike(photo.id);
-    if (onHeartSpawn) onHeartSpawn(e.clientX - rect.left, e.clientY - rect.top);
+    setPop(true); setTimeout(() => setPop(false), 200);
+    if (!liked) { setLiked(true); markLiked(photo.id); }
+    onLike(photo.id);                                    // every tap = +1 love, hearts keep erupting
+    if (onHeartSpawn) onHeartSpawn(e.clientX - rect.left, e.clientY - rect.top, 90);
   };
   const handleShare = (e) => {
     e.stopPropagation();
@@ -457,8 +496,8 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
   };
 
   return (
-    <div data-card className="pc-card" style={{
-      width:'clamp(300px,72vw,760px)', aspectRatio:'3 / 2', borderRadius:4, position:'relative', overflow:'hidden',
+    <div data-card className="pc-card" onClick={love} style={{
+      width:'clamp(300px,72vw,760px)', aspectRatio:'3 / 2', borderRadius:0, position:'relative', overflow:'hidden',
       flexShrink:0, cursor:'pointer', transition:'transform 0.25s, box-shadow 0.25s',
       boxShadow:'0 6px 30px rgba(0,0,0,0.14)', background:'#111',
     }}
@@ -475,7 +514,7 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
 
       {photo.isUpload && onRemove && (
         <button onClick={(e) => { e.stopPropagation(); onRemove(photo.id); }} style={{
-          position:'absolute', top:12, right:12, width:26, height:26, borderRadius:'50%',
+          position:'absolute', top:12, right:12, width:26, height:26, borderRadius:0,
           border:'none', background:'rgba(0,0,0,0.4)', color:'#fff', fontSize:13,
           cursor:'pointer', zIndex:60, display:'flex', alignItems:'center', justifyContent:'center',
         }}>{'\u2715'}</button>
@@ -489,7 +528,7 @@ function PhotoCard({ photo, likeCounts, onLike, onRemove, heartBursts, onHeartSp
 
       {/* Subtle like + share overlays */}
       <div style={{ position:'absolute', bottom:16, right:16, display:'flex', flexDirection:'column', alignItems:'center', gap:14, zIndex:60 }}>
-        <button onClick={handleLike} title={liked ? 'Liked' : 'Like'} style={{
+        <button onClick={(e)=>{ e.stopPropagation(); love(e); }} title={liked ? 'Liked' : 'Like'} style={{
           background:'transparent', border:'none', cursor:'pointer', padding:0,
           display:'flex', flexDirection:'column', alignItems:'center', gap:2,
         }}>
@@ -548,7 +587,7 @@ function UploadModal({ onClose, onUpload }) {
   };
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'#000', borderRadius:18, width:360, maxWidth:'92vw', maxHeight:'calc(100dvh - 32px)', overflowY:'auto', padding:22, position:'relative' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#000', borderRadius:0, width:360, maxWidth:'92vw', maxHeight:'calc(100dvh - 32px)', overflowY:'auto', padding:22, position:'relative' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
           <span style={{ fontFamily:IMP, fontSize:15, letterSpacing:2 }}>ADD PHOTO / VIDEO</span>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#fff' }}>{'\u2715'}</button>
@@ -556,7 +595,7 @@ function UploadModal({ onClose, onUpload }) {
         <div onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)}
           onDrop={e=>{e.preventDefault();setDrag(false);handleFile(e.dataTransfer.files[0])}}
           onClick={()=>inputRef.current?.click()}
-          style={{ height:180, borderRadius:12, cursor:'pointer', position:'relative', overflow:'hidden',
+          style={{ height:180, borderRadius:0, cursor:'pointer', position:'relative', overflow:'hidden',
             border:drag?'2px solid #fff':'2px dashed rgba(255,255,255,0.25)', background:drag?'rgba(255,255,255,0.06)':'transparent',
             display:'flex', alignItems:'center', justifyContent:'center' }}>
           <input ref={inputRef} type="file" accept="image/*,video/*" hidden onChange={e=>handleFile(e.target.files[0])} />
@@ -564,7 +603,7 @@ function UploadModal({ onClose, onUpload }) {
             <>{file?.type.startsWith('video')
               ? <video src={preview} autoPlay muted loop playsInline style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', background:'#111' }} />
               : <img src={preview} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', background:'#111' }} />}
-              <span style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,0.6)', color:'#fff', fontSize:9, padding:'3px 8px', borderRadius:4, letterSpacing:1, fontFamily:IMP }}>TAP TO CHANGE</span>
+              <span style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,0.6)', color:'#fff', fontSize:9, padding:'3px 8px', borderRadius:0, letterSpacing:1, fontFamily:IMP }}>TAP TO CHANGE</span>
             </>
           ) : (
             <div style={{ textAlign:'center', color:'#fff' }}>
@@ -574,7 +613,7 @@ function UploadModal({ onClose, onUpload }) {
           )}
         </div>
         {file && (
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10, padding:'7px 10px', background:'rgba(255,255,255,0.05)', borderRadius:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:10, padding:'7px 10px', background:'rgba(255,255,255,0.05)', borderRadius:0 }}>
             <span>{file.type.startsWith('video')?'\uD83C\uDFAC':'\uD83D\uDCF7'}</span>
             <span style={{ fontSize:11, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{file.name}</span>
             <span style={{ fontSize:10, color:'#fff' }}>{(file.size/1024/1024).toFixed(1)} MB</span>
@@ -582,18 +621,18 @@ function UploadModal({ onClose, onUpload }) {
           </div>
         )}
         <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Title (optional)"
-          style={{ width:'100%', padding:'9px 12px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:8, fontSize:12, marginTop:10, fontFamily:'Georgia,serif', outline:'none' }} />
+          style={{ width:'100%', padding:'9px 12px', border:'1px solid rgba(255,255,255,0.2)', borderRadius:0, fontSize:12, marginTop:10, fontFamily:'Georgia,serif', outline:'none' }} />
         <button onClick={handleSubmit} disabled={!file||uploading} style={{
-          width:'100%', padding:'11px', marginTop:10, border:'none', borderRadius:8,
+          width:'100%', padding:'11px', marginTop:10, border:'none', borderRadius:0,
           background:file&&!uploading?'#fff':'rgba(255,255,255,0.1)', color:file&&!uploading?'#000':'rgba(255,255,255,0.4)',
           fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:file&&!uploading?'pointer':'default',
         }}>{done?'\u2713 POSTED!':uploading?'UPLOADING...':'POST'}</button>
         {uploadError && <div style={{ color:'#e53935', fontSize:11, marginTop:8, textAlign:'center' }}>{uploadError}</div>}
         {uploading && (
-          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.92)', borderRadius:18, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.92)', borderRadius:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
             <div style={{ fontFamily:IMP, fontSize:15, letterSpacing:2, marginBottom:14 }}>{done?'\u2713 POSTED!':'UPLOADING...'}</div>
-            <div style={{ width:'70%', height:4, background:'rgba(255,255,255,0.15)', borderRadius:2, overflow:'hidden' }}>
-              <div style={{ height:'100%', background:'#fff', borderRadius:2, width:`${progress}%`, transition:'width 0.12s' }} />
+            <div style={{ width:'70%', height:4, background:'rgba(255,255,255,0.15)', borderRadius:0, overflow:'hidden' }}>
+              <div style={{ height:'100%', background:'#fff', borderRadius:0, width:`${progress}%`, transition:'width 0.12s' }} />
             </div>
             <div style={{ marginTop:8, fontSize:11, color:'#fff' }}>{Math.round(progress)}%</div>
           </div>
@@ -630,13 +669,13 @@ function ScrollRow({ photos, speed = 0.9, rowHeight: rh = 160, cardWidth: cw = 2
       style={{ display:'flex', gap:12, overflowX:'scroll', scrollbarWidth:'none', padding:'6px 0' }}>
       {display.map((p, i) => (
         <div key={`${p.id}-${i}`} style={{
-          width:cardWidth, height:rowHeight, borderRadius:12, flexShrink:0,
+          width:cardWidth, height:rowHeight, borderRadius:0, flexShrink:0,
           position:'relative', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,0,0,0.08)',
           transition:'transform 0.2s', cursor:'pointer',
         }} onMouseEnter={e=>e.currentTarget.style.transform='scale(1.03)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
           <img src={p.src} alt={p.title} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
           <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.6) 100%)' }} />
-          <div style={{ position:'absolute', top:8, left:8, display:'flex', alignItems:'center', gap:4, background:'#fff', borderRadius:20, padding:'3px 9px', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' }}>
+          <div style={{ position:'absolute', top:8, left:8, display:'flex', alignItems:'center', gap:4, background:'#fff', borderRadius:0, padding:'3px 9px', boxShadow:'0 1px 4px rgba(0,0,0,0.1)' }}>
             <span style={{ color:'#e53935', fontSize:12 }}>{'\u2764\uFE0F'}</span>
             <span style={{ fontFamily:IMP, fontSize:11, fontWeight:700 }}>{(likeCounts[p.id] ?? p.likes) >= 1000 ? ((likeCounts[p.id]??p.likes)/1000).toFixed(1)+'K' : (likeCounts[p.id]??p.likes)}</span>
           </div>
@@ -658,13 +697,13 @@ function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
   const emoji = member.rank==='Gold'?'\uD83E\uDD47':member.rank==='Silver'?'\uD83E\uDD48':'\uD83E\uDD49';
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:600, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:'#000', borderRadius:18, width:420, maxWidth:'92vw', maxHeight:'88vh', overflow:'auto', position:'relative' }}>
-        <div style={{ height:80, position:'relative', overflow:'hidden', borderRadius:'18px 18px 0 0', background:'#000' }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#000', borderRadius:0, width:420, maxWidth:'92vw', maxHeight:'88vh', overflow:'auto', position:'relative' }}>
+        <div style={{ height:80, position:'relative', overflow:'hidden', borderRadius:0, background:'#000' }}>
           {member.posts[0] && <img src={member.posts[0].src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'blur(8px)', opacity:0.4 }} />}
-          <button onClick={onClose} style={{ position:'absolute', top:8, right:8, background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', width:26, height:26, borderRadius:'50%', cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>{'\u2715'}</button>
+          <button onClick={onClose} style={{ position:'absolute', top:8, right:8, background:'rgba(255,255,255,0.2)', border:'none', color:'#fff', width:26, height:26, borderRadius:0, cursor:'pointer', fontSize:13, display:'flex', alignItems:'center', justifyContent:'center' }}>{'\u2715'}</button>
         </div>
         <div style={{ display:'flex', justifyContent:'center', marginTop:-32, position:'relative', zIndex:2 }}>
-          <div style={{ width:64, height:64, borderRadius:'50%', border:'3px solid #fff', overflow:'hidden', background:'#eee' }}>
+          <div style={{ width:64, height:64, borderRadius:0, border:'3px solid #fff', overflow:'hidden', background:'#eee' }}>
             {member.posts[0] && <img src={member.posts[0].src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
           </div>
         </div>
@@ -673,7 +712,7 @@ function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
           <div style={{ fontSize:11, color:'#fff', marginTop:1 }}>@{member.handle}</div>
           <div style={{ fontSize:11, color:'#fff', marginTop:5 }}>{member.bio}</div>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, margin:'14px clamp(14px,3vw,40px)', background:'rgba(255,255,255,0.1)', borderRadius:10, overflow:'hidden' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:1, margin:'14px clamp(14px,3vw,40px)', background:'rgba(255,255,255,0.1)', borderRadius:0, overflow:'hidden' }}>
           {[{l:'Posts',v:member.posts.length},{l:'Followers',v:member.followers},{l:'Following',v:member.following},{l:'Score',v:member.score}].map(s=>(
             <div key={s.l} style={{ background:'#000', padding:'8px 0', textAlign:'center' }}>
               <div style={{ fontFamily:IMP, fontSize:15 }}>{s.v.toLocaleString()}</div>
@@ -681,19 +720,19 @@ function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
             </div>
           ))}
         </div>
-        <div style={{ margin:'0 18px 10px', padding:'8px 12px', background:'#000', borderRadius:10, display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ margin:'0 18px 10px', padding:'8px 12px', background:'#000', borderRadius:0, display:'flex', alignItems:'center', gap:8 }}>
           <span style={{ fontSize:18 }}>{emoji}</span>
           <div style={{ flex:1 }}>
             <div style={{ display:'flex', justifyContent:'space-between', fontSize:9, color:'#fff', marginBottom:3 }}>
               <span>{member.rank}</span><span>{member.score.toLocaleString()}/{target.toLocaleString()}</span>
             </div>
-            <div style={{ height:3, background:'rgba(255,255,255,0.15)', borderRadius:2 }}>
-              <div style={{ height:'100%', background:'#fff', borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
+            <div style={{ height:3, background:'rgba(255,255,255,0.15)', borderRadius:0 }}>
+              <div style={{ height:'100%', background:'#fff', borderRadius:0, width:`${pct}%`, transition:'width 0.3s' }} />
             </div>
           </div>
         </div>
         <div style={{ padding:'0 18px 10px', display:'flex', justifyContent:'center' }}>
-          <button onClick={onFollow} style={{ padding:'7px 28px', borderRadius:20, cursor:'pointer',
+          <button onClick={onFollow} style={{ padding:'7px 28px', borderRadius:0, cursor:'pointer',
             border:isFollowing?'1px solid rgba(255,255,255,0.2)':'none',
             background:isFollowing?'rgba(255,255,255,0.1)':'#fff', color:isFollowing?'#fff':'#000',
             fontFamily:IMP, fontSize:11, letterSpacing:2 }}>{isFollowing?'\u2713 Following':'+ Follow'}</button>
@@ -711,9 +750,9 @@ function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
           {tab==='photos'?(
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5 }}>
               {member.posts.map(p=>(
-                <div key={p.id} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', position:'relative' }}>
+                <div key={p.id} style={{ aspectRatio:'1', borderRadius:0, overflow:'hidden', position:'relative' }}>
                   <img src={p.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                  <span style={{ position:'absolute', bottom:3, left:3, background:'rgba(0,0,0,0.6)', color:'#fff', fontSize:8, padding:'2px 5px', borderRadius:3 }}>{'\u2764\uFE0F'} {p.likes}</span>
+                  <span style={{ position:'absolute', bottom:3, left:3, background:'rgba(0,0,0,0.6)', color:'#fff', fontSize:8, padding:'2px 5px', borderRadius:0 }}>{'\u2764\uFE0F'} {p.likes}</span>
                 </div>
               ))}
             </div>
@@ -751,9 +790,9 @@ function SplashPage({ setPage }) {
           width:'clamp(240px,65vw,500px)', height:'auto', display:'block',
         }} />
         <button
-          onClick={()=>setPage('photos')}
+          onClick={()=>setPage('onboard')}
           style={{
-            background:'transparent', border:'1px solid rgba(255,255,255,0.4)', borderRadius:2,
+            background:'transparent', border:'1px solid rgba(255,255,255,0.4)', borderRadius:0,
             color:'#fff', padding:'12px clamp(40px,10vw,64px)',
             fontFamily:IMP, fontSize:'clamp(12px,3vw,15px)', letterSpacing:6,
             textTransform:'uppercase', cursor:'pointer', minHeight:48,
@@ -762,16 +801,11 @@ function SplashPage({ setPage }) {
           onMouseEnter={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';e.currentTarget.style.letterSpacing='8px'}}
           onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#fff';e.currentTarget.style.letterSpacing='6px'}}
         >ENTER</button>
-        <button
-          onClick={openVIP}
-          style={{
-            marginTop:-16, background:'transparent', border:'none', color:'#fff',
-            fontFamily:IMP, fontSize:'clamp(10px,2.6vw,12px)', letterSpacing:4, textTransform:'uppercase',
-            cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'color 0.25s',
-          }}
-          onMouseEnter={e=>e.currentTarget.style.color='#fff'}
-          onMouseLeave={e=>e.currentTarget.style.color='rgba(255,255,255,0.55)'}
-        >{'\u2605'} Join the VIP list {'\u2192'}</button>
+        <div style={{ marginTop:-18, textAlign:'center', cursor:'pointer' }} onClick={openVIP}
+          title="Tap to join the waiting list">
+          <div style={{ fontFamily:HELV, fontSize:'clamp(9px,2.4vw,11px)', letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase' }}>Waitlist Number</div>
+          <div style={{ fontFamily:IMP, fontSize:'clamp(24px,7vw,40px)', letterSpacing:2, color:'#fff', marginTop:7 }}>#{waitlistNumber()}</div>
+        </div>
       </div>
     </div>
   );
@@ -829,11 +863,10 @@ function PhotosPage({ setPage }) {
     // Persist to KV (shared count) + credit the supporter's ledger score.
     sendLike(id);
   };
-  const handleHeartSpawn=(pid,x,y)=>{
-    const h=Array.from({length:5},(_,i)=>({id:Date.now()+i+Math.random(),x:x+(Math.random()-0.5)*44,y:y-10,
-      size:13+Math.random()*14,dur:1.1+Math.random()*0.9,emoji:HEART_EMOJIS[Math.floor(Math.random()*HEART_EMOJIS.length)]}));
-    setHeartsByCard(p=>({...p,[pid]:[...(p[pid]||[]),...h]}));
-    setTimeout(()=>setHeartsByCard(p=>({...p,[pid]:(p[pid]||[]).filter(b=>!h.includes(b))})),2600);
+  const handleHeartSpawn=(pid,x,y,n)=>{
+    const h=makeHeartBurst(x,y,n);
+    setHeartsByCard(p=>({...p,[pid]:[...(p[pid]||[]),...h].slice(-450)}));
+    setTimeout(()=>setHeartsByCard(p=>({...p,[pid]:(p[pid]||[]).filter(b=>!h.includes(b))})),1300);
   };
   const displayList=[...photos,...photos,...photos];
   return (
@@ -842,11 +875,11 @@ function PhotosPage({ setPage }) {
         <div style={{ display:'flex', gap:6 }}>
           <button onClick={()=>shareAutograff()}
             style={{ background:'rgba(255,255,255,0.06)', color:'#fff', border:'1px solid rgba(255,255,255,0.18)',
-              width:44, height:44, padding:0, borderRadius:8, fontSize:16, cursor:'pointer',
+              width:44, height:44, padding:0, borderRadius:0, fontSize:16, cursor:'pointer',
               display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
             }}>{'\uD83D\uDCAC'}</button>
           <button onClick={()=>setShowModal(true)} style={{
-            background:'#000', color:'#fff', border:'none', padding:'0 clamp(10px,2vw,16px)', height:44, borderRadius:8,
+            background:'#000', color:'#fff', border:'none', padding:'0 clamp(10px,2vw,16px)', height:44, borderRadius:0,
             fontSize:'clamp(10px,2vw,11px)', cursor:'pointer', fontFamily:IMP, letterSpacing:1,
             flexShrink:0, whiteSpace:'nowrap' }}>+ UPLOAD</button>
         </div>
@@ -868,7 +901,7 @@ function PhotosPage({ setPage }) {
       </div>
       <div className="pc-cta" style={{ padding:'16px clamp(14px,3vw,40px) calc(124px + env(safe-area-inset-bottom, 0px))', display:'flex', flexDirection:'column', alignItems:'center', gap:10, flexShrink:0 }}>
         <div onClick={()=>setShowModal(true)} style={{
-          width:56, height:56, borderRadius:'50%', border:'2px dashed rgba(255,255,255,0.3)',
+          width:56, height:56, borderRadius:0, border:'2px dashed rgba(255,255,255,0.3)',
           display:'flex', alignItems:'center', justifyContent:'center', fontSize:22,
           color:'#fff', cursor:'pointer' }}>+</div>
         <span style={{ fontSize:10, color:'#fff', letterSpacing:3, fontFamily:IMP }}>DRAG & DROP OR TAP TO UPLOAD</span>
@@ -931,7 +964,7 @@ function LeaderboardPage({ setPage }) {
         <div style={{ display:'flex', gap:6 }}>
           {[{k:'photos',l:'\uD83D\uDCF8 MOST LIKED'},{k:'supporters',l:'\u2764\uFE0F TOP SUPPORTERS'}].map(t=>(
             <button key={t.k} onClick={()=>setView(t.k)} style={{
-              flex:1, padding:'9px 10px', borderRadius:20, border:'none', cursor:'pointer',
+              flex:1, padding:'9px 10px', borderRadius:0, border:'none', cursor:'pointer',
               fontFamily:IMP, fontSize:11, letterSpacing:1,
               background:view===t.k?'#fff':'rgba(255,255,255,0.08)', color:view===t.k?'#000':'rgba(255,255,255,0.6)',
               transition:'all 0.2s' }}>{t.l}</button>
@@ -946,14 +979,14 @@ function LeaderboardPage({ setPage }) {
             return (
               <div key={e.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
                 <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(255,255,255,0.5)' }}>{medal(i)}</span>
-                <div style={{ width:60, height:44, borderRadius:8, overflow:'hidden', flexShrink:0 }}>
+                <div style={{ width:60, height:44, borderRadius:0, overflow:'hidden', flexShrink:0 }}>
                   <img src={e.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>{e.title}</div>
                   <div style={{ fontSize:10, color:'#fff' }}>@{e.user}</div>
-                  <div style={{ height:3, background:'rgba(255,255,255,0.12)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
-                    <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
+                  <div style={{ height:3, background:'rgba(255,255,255,0.12)', borderRadius:0, marginTop:5, overflow:'hidden' }}>
+                    <div style={{ height:'100%', background:barColor(i), borderRadius:0, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
                 <div style={{ textAlign:'right', minWidth:44 }}>
@@ -961,7 +994,7 @@ function LeaderboardPage({ setPage }) {
                   <div style={{ fontSize:8, color:'#fff', letterSpacing:2 }}>LIKES</div>
                 </div>
                 <button onClick={()=>handleVote(e.id)} disabled={!!voted[key]} style={{
-                  padding:'6px 12px', borderRadius:8, fontSize:10, cursor:voted[key]?'default':'pointer',
+                  padding:'6px 12px', borderRadius:0, fontSize:10, cursor:voted[key]?'default':'pointer',
                   fontFamily:IMP, letterSpacing:1,
                   background:voted[key]?'rgba(255,255,255,0.1)':'transparent',
                   border:`1px solid ${voted[key]?'rgba(255,255,255,0.25)':'rgba(255,255,255,0.35)'}`,
@@ -982,14 +1015,14 @@ function LeaderboardPage({ setPage }) {
             return (
               <div key={s.uid} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
                 <span style={{ width:28, fontFamily:IMP, fontSize:i<3?14:16, textAlign:'center', color:i<3?'inherit':'rgba(255,255,255,0.5)' }}>{medal(i)}</span>
-                <div style={{ width:44, height:44, borderRadius:'50%', flexShrink:0, background:i===0?'#fff':'rgba(255,255,255,0.12)',
+                <div style={{ width:44, height:44, borderRadius:0, flexShrink:0, background:i===0?'#fff':'rgba(255,255,255,0.12)',
                   display:'flex', alignItems:'center', justifyContent:'center', fontFamily:IMP, fontSize:16,
                   color:i===0?'#000':'rgba(255,255,255,0.7)' }}>{(s.name||'?').replace(/^guest_/,'').slice(0,2).toUpperCase()}</div>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontFamily:IMP, fontSize:14, fontWeight:700 }}>@{s.name}{mine&&<span style={{ fontSize:9, color:'#3ad07a', marginLeft:6 }}>YOU</span>}</div>
                   <div style={{ fontSize:10, color:'#fff' }}>{i===0?'Patron of the day':'Supporter'}</div>
-                  <div style={{ height:3, background:'rgba(255,255,255,0.12)', borderRadius:2, marginTop:5, overflow:'hidden' }}>
-                    <div style={{ height:'100%', background:barColor(i), borderRadius:2, width:`${pct}%`, transition:'width 0.3s' }} />
+                  <div style={{ height:3, background:'rgba(255,255,255,0.12)', borderRadius:0, marginTop:5, overflow:'hidden' }}>
+                    <div style={{ height:'100%', background:barColor(i), borderRadius:0, width:`${pct}%`, transition:'width 0.3s' }} />
                   </div>
                 </div>
                 <div style={{ textAlign:'right', minWidth:44 }}>
@@ -1000,12 +1033,12 @@ function LeaderboardPage({ setPage }) {
             );
           })}
           {stagnant.length>0 && (
-            <div style={{ marginTop:18, padding:'14px 16px', borderRadius:12, background:'rgba(229,57,53,0.06)', border:'1px dashed rgba(229,57,53,0.35)' }}>
+            <div style={{ marginTop:18, padding:'14px 16px', borderRadius:0, background:'rgba(229,57,53,0.06)', border:'1px dashed rgba(229,57,53,0.35)' }}>
               <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:1, color:'#e53935' }}>{'\uD83E\uDD87'} THE STAGNANT ({stagnant.length})</div>
               <div style={{ fontSize:10, color:'#fff', margin:'4px 0 8px' }}>Showed up, watched the show, never gave a like. Zero love. Do better.</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {stagnant.map(s=>(
-                  <span key={s.uid} style={{ fontSize:10, fontFamily:IMP, letterSpacing:0.5, padding:'4px 8px', borderRadius:14,
+                  <span key={s.uid} style={{ fontSize:10, fontFamily:IMP, letterSpacing:0.5, padding:'4px 8px', borderRadius:0,
                     background:s.uid===me?'#e53935':'rgba(255,255,255,0.08)', color:s.uid===me?'#fff':'rgba(255,255,255,0.6)' }}>
                     @{s.name}{s.uid===me?' (YOU 💀)':''}
                   </span>
@@ -1033,108 +1066,245 @@ function LeaderboardPage({ setPage }) {
   );
 }
 
-/* ── GuestPage (Explore) ── */
+/* ══════════════ CURATED GALLERY — horizontal-first, gamified, gallery-grade ══════════════ */
+const CATEGORIES = ['Graffiti','Automotive','Photography','Architecture','Gaming','Film','Digital Art','Fashion','Street Culture','Music Videos','Paintings','Murals'];
+const GALLERY = [
+  { id:'art-of-living',   src:'/gallery/mural-art-of-living.jpg', title:'The Art of Living',      category:'Murals',    creator:'@autograff' },
+  { id:'poetic-rhetoric', src:'/gallery/poetic-rhetoric.jpg',     title:'Poetic Rhetoric, Pt. 2', category:'Paintings', creator:'@autograff' },
+  { id:'wildstyle',       src:'/gallery/graffiti-wildstyle.jpg',  title:'Wildstyle',              category:'Graffiti',  creator:'@autograff' },
+];
+const fmtN = (n) => (n >= 1000 ? (n / 1000).toFixed(1) + 'K' : (n || 0));
+
+/* Seamless marquee — two identical, viewport-wide tracks translated -50%. No skips, no gaps. */
+function Marquee({ text, dur, bg, color, size }) {
+  const t = (text + '').repeat(3);
+  const sp = { fontFamily:IMP, fontSize:size || 11, letterSpacing:3, color:color || '#fff', display:'inline-block', whiteSpace:'pre' };
+  return (
+    <div style={{ background:bg || 'transparent', overflow:'hidden', whiteSpace:'pre', flexShrink:0, borderTop:'1px solid rgba(255,255,255,0.08)', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ display:'inline-flex', animation:'marqueeText ' + (dur || 30) + 's linear infinite', willChange:'transform', padding:'9px 0' }}>
+        <span style={sp}>{t}</span>
+        <span style={sp} aria-hidden="true">{t}</span>
+      </div>
+    </div>
+  );
+}
+
+/* 16:9 card on the conveyor. TAP = pop it up (lightbox); the heart = multi-tap love, hundreds
+   of hearts erupt; share = share. DRAG scrolls. No accidental profile jump. Sharp corners. */
+function GalleryCard({ item, counts, onView, onLove, onShare }) {
+  const [bursts, setBursts] = useState([]);
+  const [loved, setLoved] = useState(() => hasLiked(item.id));
+  const g = useRef({ moved:false, skip:false, sx:0, sy:0 });
+  const c = counts || { likes:0, shares:0 };
+  const love = (e) => {
+    e.stopPropagation();
+    if (!loved) { setLoved(true); markLiked(item.id); }
+    onLove(item.id);
+    const el = e.currentTarget.closest('[data-gcard]'); const r = el.getBoundingClientRect();
+    const parts = makeHeartBurst(e.clientX - r.left, e.clientY - r.top, 90);
+    setBursts(prev => [...prev, ...parts].slice(-450));
+    setTimeout(() => setBursts(prev => prev.filter(p => !parts.includes(p))), 1500);
+  };
+  const share = (e) => { e.stopPropagation(); onShare(item); };
+  const down = (e) => { const s2=g.current; s2.skip = !!(e.target.closest && e.target.closest('button')); s2.moved=false; s2.sx=e.clientX; s2.sy=e.clientY; };
+  const move = (e) => { const s2=g.current; if (Math.abs(e.clientX-s2.sx)>10 || Math.abs(e.clientY-s2.sy)>10) s2.moved=true; };
+  const up = () => { const s2=g.current; if (!s2.skip && !s2.moved) onView(item); };
+  return (
+    <div data-gcard role="button" tabIndex={0}
+      onPointerDown={down} onPointerMove={move} onPointerUp={up}
+      onMouseEnter={e => { const cc=e.currentTarget; cc.style.transform='scale(1.035)'; cc.style.boxShadow='0 28px 66px rgba(0,0,0,0.72)'; cc.style.filter='brightness(1.07)'; }}
+      onMouseLeave={e => { const cc=e.currentTarget; cc.style.transform='scale(1)'; cc.style.boxShadow='0 4px 18px rgba(0,0,0,0.45)'; cc.style.filter='none'; }}
+      style={{ width:'clamp(300px,86vw,760px)', aspectRatio:'16 / 9', flexShrink:0, position:'relative', overflow:'hidden', borderRadius:0, cursor:'pointer', background:'#070707', userSelect:'none', WebkitUserSelect:'none', WebkitTapHighlightColor:'transparent', boxShadow:'0 4px 18px rgba(0,0,0,0.45)', transition:'transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .34s ease, filter .34s ease' }}>
+      <img src={item.src} alt={item.title} loading="lazy" draggable={false} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', background:'#070707', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, transparent 44%, rgba(0,0,0,0.82) 100%)' }} />
+      <FloatingHearts bursts={bursts} />
+      <div style={{ position:'absolute', left:16, right:92, bottom:14, pointerEvents:'none' }}>
+        <div style={{ fontFamily:HELV, fontSize:9, letterSpacing:3, color:'#c9c9c9', textTransform:'uppercase', marginBottom:4 }}>{item.category}</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(15px,3.2vw,21px)', color:'#fff', letterSpacing:0.4, lineHeight:1 }}>{item.title}</div>
+        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:1, color:'#8f8f8f', marginTop:5 }}>{item.creator}</div>
+      </div>
+      <div style={{ position:'absolute', right:14, bottom:14, display:'flex', flexDirection:'column', gap:12, alignItems:'center' }}>
+        <button onClick={love} title="Love" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+          <HeartIcon filled={loved} size={30} />
+          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)' }}>{fmtN(c.likes)}</span>
+        </button>
+        <button onClick={share} title="Share" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+          <span style={{ fontSize:21, color:'#fff', lineHeight:1, filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }}>↗</span>
+          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)' }}>{fmtN(c.shares)}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Conveyor belt — drifts on its own via a fractional accumulator (works on mobile, where
+   reading scrollLeft floors sub-pixels). Pauses on touch/hover; swipe (touch) or drag (mouse). */
+function FeaturedRail({ items, counts, onView, onLove, onShare }) {
+  const ref = useRef(null);
+  const pause = useRef(false);
+  const drag = useRef({ on:false, sx:0, sl:0 });
+  const loop = items.length > 1 ? [...items, ...items, ...items] : items;
+  useEffect(() => {
+    const el = ref.current; if (!el || items.length < 2) return;
+    let raf, pos = 0;
+    const init = setTimeout(() => {
+      pos = el.scrollWidth / 3; el.scrollLeft = pos;
+      const step = () => {
+        if (pause.current) { pos = el.scrollLeft; }
+        else { pos += 0.4; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
+        raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, 160);
+    return () => { clearTimeout(init); cancelAnimationFrame(raf); };
+  }, [items]);
+  const down = (e) => { pause.current = true; if (e.pointerType === 'mouse' && ref.current) drag.current = { on:true, sx:e.clientX, sl:ref.current.scrollLeft }; };
+  const move = (e) => { if (drag.current.on && ref.current) ref.current.scrollLeft = drag.current.sl - (e.clientX - drag.current.sx); };
+  const end = () => { drag.current.on = false; setTimeout(() => { pause.current = false; }, 1400); };
+  return (
+    <div ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
+      onMouseEnter={() => { pause.current = true; }} onMouseLeave={() => { drag.current.on = false; pause.current = false; }}
+      style={{ display:'flex', gap:'clamp(12px,2vw,20px)', overflowX:'auto', scrollbarWidth:'none', padding:'6px clamp(14px,3vw,40px) 22px', WebkitOverflowScrolling:'touch', cursor:'grab' }}>
+      {loop.map((item, i) => <GalleryCard key={item.id + '-' + i} item={item} counts={counts[item.id]} onView={onView} onLove={onLove} onShare={onShare} />)}
+    </div>
+  );
+}
+
+/* Cinematic hero — smaller, shows the FULL art (contain), cross-fades through the works. */
+function GalleryHero({ items, onOpen }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => { if (items.length < 2) return; const t = setInterval(() => setIdx(i => (i + 1) % items.length), 5400); return () => clearInterval(t); }, [items.length]);
+  const cur = items[idx] || items[0];
+  if (!cur) return null;
+  return (
+    <div style={{ position:'relative', width:'100%', height:'clamp(190px,36vh,480px)', overflow:'hidden', background:'#000', flexShrink:0 }}>
+      {items.map((it, i) => (
+        <img key={it.id} src={it.src} alt="" aria-hidden={i!==idx} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', opacity:i===idx?1:0, transition:'opacity 1.2s ease' }} />
+      ))}
+      <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, rgba(0,0,0,0.26) 0%, transparent 22%, transparent 54%, rgba(0,0,0,0.88) 100%)' }} />
+      <div style={{ position:'absolute', left:'clamp(16px,4vw,52px)', right:'clamp(16px,4vw,52px)', bottom:'clamp(14px,3vh,34px)' }}>
+        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#d8d8d8', textTransform:'uppercase', marginBottom:6 }}>{cur.category}</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(22px,6vw,50px)', color:'#fff', letterSpacing:0.5, lineHeight:0.98, maxWidth:640 }}>{cur.title}</div>
+        <button onClick={() => onOpen(cur)} style={{ marginTop:11, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'10px 24px', fontFamily:IMP, fontSize:12, letterSpacing:2, cursor:'pointer' }}>VIEW</button>
+      </div>
+      {items.length > 1 && (
+        <div style={{ position:'absolute', right:'clamp(16px,4vw,52px)', top:'clamp(12px,2.5vh,24px)', display:'flex', gap:6 }}>
+          {items.map((_, i) => <span key={i} style={{ width:i===idx?18:6, height:6, background:i===idx?'#fff':'rgba(255,255,255,0.4)', transition:'all .4s' }} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* The pop-up — the full work on black. Love it as many times as you want (hearts erupt),
+   share it, and enter the artist's profile only when you deliberately tap their name. */
+function GalleryLightbox({ item, counts, onClose, onLove, onShare, onCreator }) {
+  const [bursts, setBursts] = useState([]);
+  const [loved, setLoved] = useState(() => hasLiked(item.id));
+  if (!item) return null;
+  const c = counts || { likes:0, shares:0 };
+  const love = (e) => {
+    e.stopPropagation();
+    if (!loved) { setLoved(true); markLiked(item.id); }
+    onLove(item.id);
+    const host = e.currentTarget.closest('[data-lb]'); const r = host.getBoundingClientRect();
+    const parts = makeHeartBurst(e.clientX - r.left, e.clientY - r.top, 120);
+    setBursts(prev => [...prev, ...parts].slice(-500));
+    setTimeout(() => setBursts(prev => prev.filter(p => !parts.includes(p))), 1500);
+  };
+  return (
+    <div data-lb onClick={onClose} style={{ position:'fixed', inset:0, zIndex:700, background:'rgba(0,0,0,0.96)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'clamp(16px,4vw,48px)', overflow:'hidden' }}>
+      <button onClick={onClose} style={{ position:'absolute', top:16, right:16, width:34, height:34, borderRadius:0, border:'1px solid rgba(255,255,255,0.3)', background:'transparent', color:'#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>✕</button>
+      <img src={item.src} alt={item.title} onClick={e=>e.stopPropagation()} style={{ maxWidth:'96vw', maxHeight:'58vh', objectFit:'contain', boxShadow:'0 30px 90px rgba(0,0,0,0.85)' }} />
+      <FloatingHearts bursts={bursts} />
+      <div onClick={e=>e.stopPropagation()} style={{ marginTop:16, textAlign:'center', maxWidth:520 }}>
+        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#b3b3b3', textTransform:'uppercase', marginBottom:6 }}>{item.category}</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(20px,4vw,30px)', color:'#fff', letterSpacing:0.5 }}>{item.title}</div>
+        <button onClick={() => onCreator(item.creator)} style={{ marginTop:8, background:'none', border:'none', color:'#9a9a9a', fontFamily:HELV, fontSize:12, letterSpacing:1, cursor:'pointer' }}>{item.creator} →</button>
+        <div style={{ display:'flex', gap:24, justifyContent:'center', marginTop:16 }}>
+          <button onClick={love} title="Love" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+            <HeartIcon filled={loved} size={34} />
+            <span style={{ fontFamily:IMP, fontSize:12, color:'#fff' }}>{fmtN(c.likes)}</span>
+          </button>
+          <button onClick={() => onShare(item)} title="Share" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+            <span style={{ fontSize:26, color:'#fff', lineHeight:1 }}>↗</span>
+            <span style={{ fontFamily:IMP, fontSize:12, color:'#fff' }}>{fmtN(c.shares)}</span>
+          </button>
+        </div>
+        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:1, color:'#6a6a6a', marginTop:12 }}>Tap the heart — love it as many times as you want</div>
+      </div>
+    </div>
+  );
+}
+
+/* Creator profile — their works + total love. */
+function CreatorProfile({ handle, counts, onClose, onOpen }) {
+  const works = GALLERY.filter(w => w.creator === handle);
+  const loves = works.reduce((s2, w) => s2 + ((counts[w.id] && counts[w.id].likes) || 0), 0);
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:680, background:'rgba(0,0,0,0.96)', overflowY:'auto', padding:'clamp(24px,6vw,64px) clamp(16px,4vw,48px)' }}>
+      <button onClick={onClose} style={{ position:'fixed', top:16, right:16, width:34, height:34, borderRadius:0, border:'1px solid rgba(255,255,255,0.3)', background:'transparent', color:'#fff', fontSize:16, cursor:'pointer', zIndex:2 }}>✕</button>
+      <div onClick={e=>e.stopPropagation()} style={{ maxWidth:960, margin:'0 auto' }}>
+        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#b3b3b3', textTransform:'uppercase' }}>Creator</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(30px,7vw,54px)', color:'#fff', letterSpacing:0.5, marginTop:6 }}>{handle}</div>
+        <div style={{ display:'flex', gap:34, marginTop:18 }}>
+          <div><div style={{ fontFamily:IMP, fontSize:24, color:'#fff' }}>{works.length}</div><div style={{ fontFamily:HELV, fontSize:9, letterSpacing:2, color:'#8f8f8f', textTransform:'uppercase' }}>Works</div></div>
+          <div><div style={{ fontFamily:IMP, fontSize:24, color:'#ff2d55' }}>{fmtN(loves)}</div><div style={{ fontFamily:HELV, fontSize:9, letterSpacing:2, color:'#8f8f8f', textTransform:'uppercase' }}>Loves</div></div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:14, marginTop:32 }}>
+          {works.map(w => (
+            <button key={w.id} onClick={() => onOpen(w)} style={{ aspectRatio:'16 / 9', border:'none', padding:0, background:'#070707', cursor:'pointer', position:'relative', overflow:'hidden' }}>
+              <img src={w.src} alt={w.title} style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+              <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.75) 100%)' }} />
+              <div style={{ position:'absolute', left:12, bottom:10, fontFamily:IMP, fontSize:14, color:'#fff' }}>{w.title}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── GuestPage — the cinematic, gamified gallery homepage ── */
 function GuestPage({ setPage }) {
-  const [expandedTile, setExpandedTile] = useState(null);
-  const [email, setEmail] = useState('');
-  const [joined, setJoined] = useState(false);
-  // Real uploads + real like counts drive Explore. No seed, no invented numbers.
-  const [feed, setFeed] = useState([]);
+  const [lightbox, setLightbox] = useState(null);
+  const [creator, setCreator] = useState(null);
+  const [counts, setCounts] = useState({});
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetch('/api/photos').then(r => r.ok ? r.json() : { photos: [] }).catch(() => ({ photos: [] })),
-      fetch('/api/likes').then(r => r.ok ? r.json() : { likes: {} }).catch(() => ({ likes: {} })),
-    ]).then(([pd, ld]) => {
+    fetch('/api/likes').then(r => r.ok ? r.json() : {}).then(d => {
       if (!active) return;
-      const deltas = (ld && ld.likes) || {};
-      setFeed((Array.isArray(pd.photos) ? pd.photos : [])
-        .filter(p => p && p.src)
-        .map(p => ({ ...p, likes: (p.likes || 0) + Number(deltas[p.id] || 0) })));
-    });
+      const L = (d && d.likes) || {}, S = (d && d.shares) || {}; const m = {};
+      GALLERY.forEach(gg => { m[gg.id] = { likes:Number(L[gg.id] || 0), shares:Number(S[gg.id] || 0) }; });
+      setCounts(m);
+    }).catch(() => {});
     return () => { active = false; };
   }, []);
-  const mostRecent = feed;                                    // KV returns newest-first
-  const topRated = [...feed].sort((a, b) => b.likes - a.likes);
-  const benefits = [
-    { icon:'\uD83D\uDCF7', title:'UPLOAD' },
-    { icon:'\u2764\uFE0F', title:'GET LIKES' },
-    { icon:'\uD83C\uDFC6', title:'COMPETE' },
-    { icon:'\uD83D\uDD12', title:'VAULT' },
-    { icon:'\uD83D\uDC64', title:'PROFILE' },
-    { icon:'\uD83C\uDF10', title:'COMMUNITY' },
-  ];
-  const marquee = 'AUTOGRAFF \u00B7 SHARE TO WIN \u00B7 PHOTO CONTEST \u00B7 STREET CULTURE \u00B7 DAILY WINNERS \u00B7 ';
+  const onLove = (id) => { setCounts(p => ({ ...p, [id]: { likes:(((p[id]||{}).likes)||0)+1, shares:((p[id]||{}).shares)||0 } })); sendLike(id, 1); };
+  const onShare = (item) => {
+    setCounts(p => ({ ...p, [item.id]: { likes:((p[item.id]||{}).likes)||0, shares:(((p[item.id]||{}).shares)||0)+1 } }));
+    sendShare(item.id); shareAutograff('Check out "' + item.title + '" ' + item.creator + ' on AUTOGRAFF');
+  };
+  const ranked = [...GALLERY].sort((x, y) => (((counts[y.id]||{}).likes)||0) - (((counts[x.id]||{}).likes)||0));
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000', overflow:'auto' }}>
-      <PageHeader setPage={setPage} subtitle="EXPLORE" right={
-        <button onClick={()=>setPage('profile')} style={{
-          background:'#fff', color:'#000', border:'none', padding:'9px 18px', borderRadius:8,
-          fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>JOIN NOW</button>
+      <PageHeader setPage={setPage} subtitle="GALLERY" right={
+        <button onClick={openVIP} style={{ background:'#fff', color:'#000', border:'none', padding:'9px 18px', borderRadius:0, fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>REQUEST ACCESS</button>
       } />
-      {/* Marquee */}
-      <div style={{ background:'#000', padding:'9px 0', overflow:'hidden', flexShrink:0 }}>
-        <div style={{ display:'flex', animation:'marqueeText 14s linear infinite', whiteSpace:'nowrap' }}>
-          {[0,1,2,3].map(i=>(
-            <span key={i} style={{ fontFamily:IMP, fontSize:12, color:'#fff', letterSpacing:4 }}>{marquee}</span>
-          ))}
-        </div>
+      <Marquee bg="#0b0b0b" dur={40} text={'YOU’RE #' + waitlistNumber() + ' IN LINE FOR AUTOGRAFF      —      INVITATION-ONLY, EARNED NOT BOUGHT      —      CLAIM YOUR SPOT BEFORE THE DOORS CLOSE      —      '} />
+      <GalleryHero items={GALLERY} onOpen={setLightbox} />
+      <Marquee dur={46} color="#cfcfcf" text={CATEGORIES.map(c => c.toUpperCase()).join('      ·      ') + '      ·      '} />
+      <div style={{ padding:'14px 0 4px clamp(14px,3vw,40px)', flexShrink:0 }}>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'#fff' }}>— MOST LOVED</div>
+        <FeaturedRail items={ranked} counts={counts} onView={setLightbox} onLove={onLove} onShare={onShare} />
       </div>
-      {/* Trending \u2014 real uploads ranked by real likes. Hidden until there is content. */}
-      {topRated.length > 0 && (
-        <div style={{ padding:'14px 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-          <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} TRENDING NOW</div>
-          <ScrollRow photos={topRated} speed={0.7} rowHeight={190} cardWidth={280} />
-        </div>
-      )}
-      {/* Most Recent \u2014 newest uploads first. */}
-      {mostRecent.length > 0 && (
-        <div style={{ padding:'14px 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-          <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} MOST RECENT</div>
-          <ScrollRow photos={mostRecent} speed={1.1} rowHeight={150} cardWidth={240} />
-        </div>
-      )}
-      {/* Member Benefits */}
-      <div style={{ padding:'18px clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'#fff' }}>{'\u2014'} MEMBER BENEFITS</div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
-          {benefits.map((b,i)=>(
-            <div key={i} onClick={()=>setExpandedTile(expandedTile===i?null:i)} style={{
-              padding:'18px 10px', borderRadius:12, cursor:'pointer', textAlign:'center', transition:'all 0.2s',
-              background:expandedTile===i?'#fff':'rgba(255,255,255,0.05)',
-              color:expandedTile===i?'#000':'#fff',
-              border:expandedTile===i?'none':'1px solid rgba(255,255,255,0.1)',
-            }}>
-              <div style={{ fontSize:26 }}>{b.icon}</div>
-              <div style={{ fontFamily:IMP, fontSize:11, letterSpacing:2, marginTop:8 }}>{b.title}</div>
-            </div>
-          ))}
-        </div>
+      <div style={{ margin:'8px clamp(14px,3vw,40px) 110px', borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:28, flexShrink:0 }}>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5vw,30px)', color:'#fff', letterSpacing:0.5, lineHeight:1.05, maxWidth:520 }}>A gallery for work made to be seen.</div>
+        <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:12, lineHeight:1.6, maxWidth:460 }}>AUTOGRAFF is a curated, invitation-only home for graffiti, murals, photography, automotive, film and the culture around them — presented the way it was meant to be viewed.</div>
+        <button onClick={openVIP} style={{ marginTop:20, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'13px 30px', fontFamily:IMP, fontSize:12, letterSpacing:2, cursor:'pointer' }}>REQUEST ACCESS</button>
       </div>
-      {/* App Store coming soon */}
-      <AppStoreBanner style={{ margin:'20px clamp(14px,3vw,40px) 0' }} />
-      {/* Join CTA */}
-      <div style={{ margin:'20px clamp(14px,3vw,40px) 100px', background:'#000', borderRadius:14, padding:'26px 22px',
-        backgroundImage:'repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 1px, transparent 1px, transparent 12px)',
-        textAlign:'center', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:17, color:'#fff', letterSpacing:3 }}>JOIN THE CONTEST</div>
-        <div style={{ fontSize:11, color:'#fff', marginTop:5, letterSpacing:2 }}>UPLOAD {'\u00B7'} COMPETE {'\u00B7'} WIN</div>
-        {joined?(
-          <div style={{ marginTop:18, fontSize:13, color:'#fff' }}>{'\u2705'} YOU'RE ON THE LIST!</div>
-        ):(
-          <div style={{ marginTop:18, display:'flex', gap:6, justifyContent:'center' }}>
-            <input value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com"
-              style={{ padding:'9px 12px', borderRadius:8, border:'none', fontSize:12, outline:'none',
-                background:'rgba(255,255,255,0.1)', color:'#fff', width:180 }} />
-            <button onClick={()=>{if(email.includes('@'))setJoined(true)}} style={{
-              padding:'9px 18px', borderRadius:8, border:'none', background:'#fff', color:'#000',
-              fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>JOIN</button>
-          </div>
-        )}
-        <button onClick={()=>setPage('photos')} style={{
-          marginTop:14, background:'none', border:'none', color:'#fff',
-          fontSize:11, cursor:'pointer', letterSpacing:1 }}>Browse as Guest {'\u2192'}</button>
-      </div>
+      {lightbox && <GalleryLightbox item={lightbox} counts={counts[lightbox.id]} onClose={() => setLightbox(null)} onLove={onLove} onShare={onShare} onCreator={(h) => { setLightbox(null); setCreator(h); }} />}
+      {creator && <CreatorProfile handle={creator} counts={counts} onClose={() => setCreator(null)} onOpen={(w) => { setCreator(null); setLightbox(w); }} />}
     </div>
   );
 }
@@ -1154,7 +1324,7 @@ function MembersPage({ setPage }) {
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="MEMBERS" />
       <div style={{ padding:'12px clamp(14px,3vw,40px) 0', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 14px', background:'rgba(255,255,255,0.05)', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 14px', background:'rgba(255,255,255,0.05)', borderRadius:0, border:'1px solid rgba(255,255,255,0.12)' }}>
           <span style={{ color:'#fff' }}>{'\uD83D\uDD0D'}</span>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search members..."
             style={{ flex:1, border:'none', background:'none', color:'#fff', fontSize:12, outline:'none', fontFamily:'Georgia,serif' }} />
@@ -1163,7 +1333,7 @@ function MembersPage({ setPage }) {
       <div style={{ display:'flex', gap:6, padding:'10px 18px', flexShrink:0, alignItems:'center' }}>
         {filters.map(f=>(
           <button key={f} onClick={()=>setFilter(f)} style={{
-            padding:'5px 12px', borderRadius:20, border:filter===f?'none':'1px solid rgba(255,255,255,0.2)', cursor:'pointer',
+            padding:'5px 12px', borderRadius:0, border:filter===f?'none':'1px solid rgba(255,255,255,0.2)', cursor:'pointer',
             fontFamily:IMP, fontSize:10, letterSpacing:1,
             background:filter===f?'#fff':'transparent', color:filter===f?'#000':'rgba(255,255,255,0.5)',
           }}>{f!=='All'?rankEmoji(f)+' ':''}{f.toUpperCase()}</button>
@@ -1175,7 +1345,7 @@ function MembersPage({ setPage }) {
           <div key={m.id} onClick={()=>setPortfolio(m)} style={{
             display:'flex', alignItems:'center', gap:10, padding:'14px 0', borderBottom:'1px solid rgba(255,255,255,0.1)', cursor:'pointer',
           }}>
-            <div style={{ width:56, height:56, borderRadius:'50%', overflow:'hidden', background:'#eee', flexShrink:0, border:'2px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ width:56, height:56, borderRadius:0, overflow:'hidden', background:'#eee', flexShrink:0, border:'2px solid rgba(255,255,255,0.1)' }}>
               {m.posts[0] && <img src={m.posts[0].src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -1192,7 +1362,7 @@ function MembersPage({ setPage }) {
               </div>
             </div>
             <button onClick={e=>{e.stopPropagation();setFollowing(p=>({...p,[m.id]:!p[m.id]}))}} style={{
-              padding:'0 clamp(10px,2vw,16px)', height:44, borderRadius:22, fontSize:10, cursor:'pointer',
+              padding:'0 clamp(10px,2vw,16px)', height:44, borderRadius:0, fontSize:10, cursor:'pointer',
               fontFamily:IMP, letterSpacing:1, flexShrink:0,
               background:following[m.id]?'rgba(255,255,255,0.1)':'#fff', color:following[m.id]?'#fff':'#000',
               border:following[m.id]?'1px solid rgba(255,255,255,0.25)':'none',
@@ -1265,9 +1435,9 @@ function StudioPage({ setPage }) {
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="STUDIO \u00B7 LOOP MIXER" right={
         <div style={{ display:'flex', gap:6 }}>
-          <button onClick={clearAll} style={{ padding:'8px 14px', borderRadius:8, border:'1px solid rgba(255,255,255,0.18)',
+          <button onClick={clearAll} style={{ padding:'8px 14px', borderRadius:0, border:'1px solid rgba(255,255,255,0.18)',
             background:'#000', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>CLEAR</button>
-          <button onClick={playing?stop:start} style={{ padding:'8px clamp(14px,3vw,40px)', borderRadius:8, border:'none',
+          <button onClick={playing?stop:start} style={{ padding:'8px clamp(14px,3vw,40px)', borderRadius:0, border:'none',
             background:'rgba(255,255,255,0.14)', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer',
             display:'flex', alignItems:'center', gap:6 }}>
             <span style={{ color:'#4fc3f7', fontSize:14 }}>{playing?'\u23F9':'\u25B6'}</span>
@@ -1278,9 +1448,9 @@ function StudioPage({ setPage }) {
       {/* Transport */}
       <div style={{ padding:'8px clamp(14px,3vw,40px)', display:'flex', alignItems:'center', gap:8, flexShrink:0, flexWrap:'wrap', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
         <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff' }}>BPM</span>
-        <button onClick={()=>setBpm(Math.max(60,bpm-5))} style={{ width:26, height:26, borderRadius:6, border:'1px solid rgba(255,255,255,0.18)', background:'#000', color:'#fff', cursor:'pointer', fontSize:13, fontFamily:IMP }}>{'\u2212'}</button>
+        <button onClick={()=>setBpm(Math.max(60,bpm-5))} style={{ width:26, height:26, borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', background:'#000', color:'#fff', cursor:'pointer', fontSize:13, fontFamily:IMP }}>{'\u2212'}</button>
         <span style={{ fontFamily:IMP, fontSize:18, minWidth:36, textAlign:'center', fontWeight:700 }}>{bpm}</span>
-        <button onClick={()=>setBpm(Math.min(200,bpm+5))} style={{ width:26, height:26, borderRadius:6, border:'1px solid rgba(255,255,255,0.18)', background:'#000', color:'#fff', cursor:'pointer', fontSize:13, fontFamily:IMP }}>+</button>
+        <button onClick={()=>setBpm(Math.min(200,bpm+5))} style={{ width:26, height:26, borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', background:'#000', color:'#fff', cursor:'pointer', fontSize:13, fontFamily:IMP }}>+</button>
         <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff', marginLeft:6 }}>SWING</span>
         <input type="range" min="0" max="80" value={swing} onChange={e=>setSwing(Number(e.target.value))} style={{ width:60 }} />
         <span style={{ fontFamily:IMP, fontSize:11 }}>{swing}%</span>
@@ -1296,7 +1466,7 @@ function StudioPage({ setPage }) {
             const on=activePreset===n&&playing;
             return (
               <button key={n} onClick={()=>loadPreset(n)} style={{
-                flexShrink:0, padding:'8px 14px', borderRadius:20, cursor:'pointer',
+                flexShrink:0, padding:'8px 14px', borderRadius:0, cursor:'pointer',
                 border:on?'1px solid #000':'1px solid rgba(0,0,0,0.12)',
                 background:on?'rgba(255,255,255,0.18)':'#fff', color:on?'#fff':'#000',
                 fontSize:10, fontFamily:IMP, letterSpacing:1, whiteSpace:'nowrap',
@@ -1310,24 +1480,24 @@ function StudioPage({ setPage }) {
       {/* Save button */}
       <div style={{ padding:'6px clamp(14px,3vw,40px)', flexShrink:0 }}>
         <button onClick={()=>setShowSave(!showSave)} style={{
-          padding:'5px 12px', borderRadius:6, border:'1px solid rgba(255,255,255,0.18)',
+          padding:'5px 12px', borderRadius:0, border:'1px solid rgba(255,255,255,0.18)',
           background:'#000', color:'#fff', fontSize:10, cursor:'pointer', fontFamily:IMP, letterSpacing:1,
           display:'flex', alignItems:'center', gap:4 }}>{'\uD83D\uDCBE'} SAVE</button>
         {showSave && (
           <div style={{ display:'flex', gap:6, marginTop:6 }}>
             <input value={saveName} onChange={e=>setSaveName(e.target.value)} placeholder="Name"
-              style={{ flex:1, padding:'5px 8px', border:'1px solid rgba(255,255,255,0.18)', borderRadius:6, fontSize:11, outline:'none' }} />
+              style={{ flex:1, padding:'5px 8px', border:'1px solid rgba(255,255,255,0.18)', borderRadius:0, fontSize:11, outline:'none' }} />
             <button onClick={()=>{if(!saveName.trim())return;
               setSaved(p=>[...p,{name:saveName,patterns:JSON.parse(JSON.stringify(patterns)),bpm,swing}]);
               setSaveName('');setShowSave(false);}} style={{
-              padding:'5px 12px', borderRadius:6, border:'none', background:'rgba(255,255,255,0.14)', color:'#fff',
+              padding:'5px 12px', borderRadius:0, border:'none', background:'rgba(255,255,255,0.14)', color:'#fff',
               fontSize:10, cursor:'pointer', fontFamily:IMP }}>OK</button>
           </div>
         )}
         {saved.map((s,i)=>(
           <button key={i} onClick={()=>{stop();const p={};TRACK_DEFS.forEach(t=>p[t.id]=s.patterns[t.id]?[...s.patterns[t.id]]:new Array(16).fill(false));
             setPatterns(p);setBpm(s.bpm);setSwing(s.swing);}} style={{
-            display:'block', padding:'4px 8px', marginTop:4, borderRadius:4, border:'1px solid rgba(255,255,255,0.12)',
+            display:'block', padding:'4px 8px', marginTop:4, borderRadius:0, border:'1px solid rgba(255,255,255,0.12)',
             background:'#000', color:'#fff', cursor:'pointer', fontSize:10, fontFamily:IMP }}>{'\uD83D\uDCC1'} {s.name}</button>
         ))}
       </div>
@@ -1348,7 +1518,7 @@ function StudioPage({ setPage }) {
           <div key={track.id} style={{ display:'flex', alignItems:'stretch', gap:6, flex:'1 1 0', minHeight:42 }}>
             {/* Label */}
             <div style={{ width:106, flexShrink:0, display:'flex', alignItems:'center', gap:6, padding:'0 4px',
-              borderLeft:`4px solid ${track.color}`, borderRadius:4, background:'rgba(255,255,255,0.03)' }}>
+              borderLeft:`4px solid ${track.color}`, borderRadius:0, background:'rgba(255,255,255,0.03)' }}>
               <span style={{ fontSize:16 }}>{track.emoji}</span>
               <span style={{ fontFamily:IMP, fontSize:11, letterSpacing:1, lineHeight:1.05 }}>{track.name}</span>
             </div>
@@ -1356,7 +1526,7 @@ function StudioPage({ setPage }) {
             <div style={{ flex:1, display:'flex', gap:3, alignItems:'stretch' }}>
               {(patterns[track.id]||[]).map((on,i)=>(
                 <button key={i} onClick={()=>setPatterns(p=>({...p,[track.id]:p[track.id].map((v,j)=>j===i?!v:v)}))} style={{
-                  flex:1, minWidth:0, minHeight:34, borderRadius:5, border:'none', cursor:'pointer', transition:'all 0.08s',
+                  flex:1, minWidth:0, minHeight:34, borderRadius:0, border:'none', cursor:'pointer', transition:'all 0.08s',
                   background: currentStep===i&&playing ? (on?'#fff':'rgba(255,255,255,0.9)') : on?track.color:(i%4===0?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.05)'),
                   boxShadow: on ? `0 2px 8px ${track.color}55` : 'none',
                   outline: currentStep===i&&playing ? `2px solid ${track.color}` : 'none',
@@ -1369,15 +1539,15 @@ function StudioPage({ setPage }) {
               <input type="range" min="0" max="100" value={Math.round((volumes[track.id]??track.vol)*100)}
                 onChange={e=>setVolumes(p=>({...p,[track.id]:e.target.value/100}))} style={{ width:52, flexShrink:0 }} />
               <button onClick={()=>setMuted(p=>({...p,[track.id]:!p[track.id]}))} style={{
-                width:30, height:30, borderRadius:5, border:'1px solid rgba(255,255,255,0.18)', fontSize:11, cursor:'pointer',
+                width:30, height:30, borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', fontSize:11, cursor:'pointer',
                 fontFamily:IMP, background:muted[track.id]?'#c00':'#fff', color:muted[track.id]?'#fff':'rgba(0,0,0,0.4)' }}>M</button>
               <button onClick={()=>setSolo(p=>p===track.id?null:track.id)} style={{
-                width:30, height:30, borderRadius:5, border:'1px solid rgba(255,255,255,0.18)', fontSize:11, cursor:'pointer',
+                width:30, height:30, borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', fontSize:11, cursor:'pointer',
                 fontFamily:IMP, background:solo===track.id?'#f90':'#fff', color:solo===track.id?'#fff':'rgba(0,0,0,0.4)' }}>S</button>
               <button onClick={()=>setPatterns(p=>({...p,[track.id]:p[track.id].map(()=>Math.random()>0.65)}))}
-                style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(255,255,255,0.18)', fontSize:13, cursor:'pointer', background:'#000' }}>{'\uD83C\uDFB2'}</button>
+                style={{ width:30, height:30, borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', fontSize:13, cursor:'pointer', background:'#000' }}>{'\uD83C\uDFB2'}</button>
               <button onClick={()=>setPatterns(p=>({...p,[track.id]:new Array(16).fill(false)}))}
-                style={{ width:30, height:30, borderRadius:5, border:'1px solid rgba(255,255,255,0.18)', fontSize:12, cursor:'pointer', background:'#000', color:'#fff' }}>{'\u2715'}</button>
+                style={{ width:30, height:30, borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', fontSize:12, cursor:'pointer', background:'#000', color:'#fff' }}>{'\u2715'}</button>
             </div>
           </div>
         ))}
@@ -1408,10 +1578,10 @@ function ProfilePage({ setPage }) {
       <PageHeader setPage={setPage} subtitle="MEMBER PROFILE" />
       <div style={{ flex:1, overflow:'auto', padding:'16px clamp(14px,3vw,40px) 100px' }}>
         {/* Profile card */}
-        <div style={{ border:'1px solid rgba(255,255,255,0.12)', borderRadius:14, padding:'20px 16px', marginBottom:16, display:'flex', alignItems:'flex-start', gap:14 }}>
+        <div style={{ border:'1px solid rgba(255,255,255,0.12)', borderRadius:0, padding:'20px 16px', marginBottom:16, display:'flex', alignItems:'flex-start', gap:14 }}>
           <div style={{ position:'relative' }}>
             <div onClick={()=>avatarRef.current?.click()} style={{
-              width:80, height:80, borderRadius:'50%', background:'rgba(255,255,255,0.06)', overflow:'hidden',
+              width:80, height:80, borderRadius:0, background:'rgba(255,255,255,0.06)', overflow:'hidden',
               cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
               border:'2px dashed rgba(255,255,255,0.25)',
             }}>
@@ -1419,7 +1589,7 @@ function ProfilePage({ setPage }) {
                 : <span style={{ fontSize:32, color:'#fff' }}>{'\uD83D\uDC64'}</span>}
             </div>
             <div onClick={()=>avatarRef.current?.click()} style={{
-              position:'absolute', bottom:-2, right:-2, width:24, height:24, borderRadius:'50%',
+              position:'absolute', bottom:-2, right:-2, width:24, height:24, borderRadius:0,
               background:'#000', color:'#fff', display:'flex', alignItems:'center', justifyContent:'center',
               fontSize:14, cursor:'pointer', border:'2px solid #fff' }}>+</div>
             <input ref={avatarRef} type="file" accept="image/*" hidden onChange={e=>{const f=e.target.files[0];if(f)setAvatar(URL.createObjectURL(f))}} />
@@ -1429,27 +1599,27 @@ function ProfilePage({ setPage }) {
               {editingName?(
                 <div style={{ display:'flex', gap:4 }}>
                   <input value={username} onChange={e=>setUsername(e.target.value)}
-                    style={{ padding:'3px 6px', border:'1px solid rgba(0,0,0,0.15)', borderRadius:4, fontSize:13, fontFamily:IMP, width:100 }} />
-                  <button onClick={()=>setEditingName(false)} style={{ padding:'3px 8px', borderRadius:4, border:'none', background:'#fff', color:'#000', fontSize:9, cursor:'pointer', fontFamily:IMP }}>SAVE</button>
+                    style={{ padding:'3px 6px', border:'1px solid rgba(0,0,0,0.15)', borderRadius:0, fontSize:13, fontFamily:IMP, width:100 }} />
+                  <button onClick={()=>setEditingName(false)} style={{ padding:'3px 8px', borderRadius:0, border:'none', background:'#fff', color:'#000', fontSize:9, cursor:'pointer', fontFamily:IMP }}>SAVE</button>
                 </div>
               ):(
                 <>
                   <span style={{ fontFamily:IMP, fontSize:16, fontWeight:700 }}>@{username}</span>
-                  <button onClick={()=>setEditingName(true)} style={{ padding:'3px 10px', borderRadius:4,
+                  <button onClick={()=>setEditingName(true)} style={{ padding:'3px 10px', borderRadius:0,
                     border:'1px solid rgba(255,255,255,0.18)', background:'#000', color:'#fff', fontSize:9, cursor:'pointer', fontFamily:IMP, letterSpacing:1 }}>EDIT</button>
                 </>
               )}
             </div>
             <div style={{ display:'flex', gap:6, marginTop:8, flexWrap:'wrap' }}>
               {[{l:'Posts',v:uploads.length},{l:'Archived',v:archived.length},{l:'Saved',v:collection.length},{l:'Likes',v:totalLikes}].map(s=>(
-                <span key={s.l} style={{ padding:'4px 10px', borderRadius:20, background:'rgba(255,255,255,0.06)', fontSize:10, fontFamily:IMP, letterSpacing:1 }}>
+                <span key={s.l} style={{ padding:'4px 10px', borderRadius:0, background:'rgba(255,255,255,0.06)', fontSize:10, fontFamily:IMP, letterSpacing:1 }}>
                   {s.v} {s.l}
                 </span>
               ))}
             </div>
           </div>
           {/* Score badge */}
-          <div style={{ background:'#000', borderRadius:12, padding:'12px 14px', textAlign:'center', flexShrink:0, minWidth:72 }}>
+          <div style={{ background:'#000', borderRadius:0, padding:'12px 14px', textAlign:'center', flexShrink:0, minWidth:72 }}>
             <div style={{ fontSize:18 }}>{rankEmoji}</div>
             <div style={{ fontFamily:IMP, fontSize:'clamp(16px,4vw,20px)', color:'#fff', lineHeight:1, marginTop:4 }}>{score.toLocaleString()}</div>
             <div style={{ fontSize:10, color:'#fff', letterSpacing:1, marginTop:3 }}>{rank.toUpperCase()}</div>
@@ -1460,8 +1630,8 @@ function ProfilePage({ setPage }) {
           <span style={{ fontSize:9, fontFamily:IMP, letterSpacing:2, color:'#fff' }}>PROGRESS TO NEXT RANK</span>
           <span style={{ fontSize:10, fontFamily:IMP, color:'#fff' }}>{score} / {target}</span>
         </div>
-        <div style={{ height:4, background:'rgba(255,255,255,0.1)', borderRadius:2, marginBottom:18, overflow:'hidden' }}>
-          <div style={{ height:'100%', background:'#fff', borderRadius:2, width:`${progress}%`, transition:'width 0.3s' }} />
+        <div style={{ height:4, background:'rgba(255,255,255,0.1)', borderRadius:0, marginBottom:18, overflow:'hidden' }}>
+          <div style={{ height:'100%', background:'#fff', borderRadius:0, width:`${progress}%`, transition:'width 0.3s' }} />
         </div>
         {/* Tabs + upload */}
         <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.1)', marginBottom:16 }}>
@@ -1472,7 +1642,7 @@ function ProfilePage({ setPage }) {
               borderBottom:tab===t?'2px solid #fff':'2px solid transparent',
               color:tab===t?'#fff':'rgba(255,255,255,0.4)' }}>{t}</button>
           ))}
-          <button onClick={()=>setShowModal(true)} style={{ marginLeft:'auto', padding:'7px 14px', borderRadius:8,
+          <button onClick={()=>setShowModal(true)} style={{ marginLeft:'auto', padding:'7px 14px', borderRadius:0,
             border:'none', background:'#fff', color:'#000', fontFamily:IMP, fontSize:10, letterSpacing:1, cursor:'pointer' }}>+ UPLOAD</button>
         </div>
         {/* Tab content */}
@@ -1485,7 +1655,7 @@ function ProfilePage({ setPage }) {
           ):(
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5 }}>
               {uploads.map(p=>(
-                <div key={p.id} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', position:'relative' }}>
+                <div key={p.id} style={{ aspectRatio:'1', borderRadius:0, overflow:'hidden', position:'relative' }}>
                   {p.type==='video'?<video src={p.src} muted loop playsInline style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                     :<img src={p.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
                   <div style={{ position:'absolute', bottom:0, left:0, right:0, display:'flex' }}>
@@ -1506,9 +1676,9 @@ function ProfilePage({ setPage }) {
           ):(
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5 }}>
               {archived.map((p,i)=>(
-                <div key={i} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden', position:'relative' }}>
+                <div key={i} style={{ aspectRatio:'1', borderRadius:0, overflow:'hidden', position:'relative' }}>
                   <img src={p.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                  <span style={{ position:'absolute', bottom:3, left:3, fontSize:7, background:'rgba(0,0,0,0.6)', color:'#fff', padding:'2px 5px', borderRadius:3 }}>{p.archivedAt}</span>
+                  <span style={{ position:'absolute', bottom:3, left:3, fontSize:7, background:'rgba(0,0,0,0.6)', color:'#fff', padding:'2px 5px', borderRadius:0 }}>{p.archivedAt}</span>
                 </div>
               ))}
             </div>
@@ -1523,7 +1693,7 @@ function ProfilePage({ setPage }) {
           ):(
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:5 }}>
               {collection.map((p,i)=>(
-                <div key={i} style={{ aspectRatio:'1', borderRadius:8, overflow:'hidden' }}>
+                <div key={i} style={{ aspectRatio:'1', borderRadius:0, overflow:'hidden' }}>
                   <img src={p.src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                 </div>
               ))}
@@ -1557,7 +1727,7 @@ function NavBar({ page, setPage }) {
             {/* Pill wraps icon only — fixed 36×26 so active highlight is always the same size */}
             <span style={{
               display:'flex', alignItems:'center', justifyContent:'center',
-              width:36, height:26, borderRadius:13,
+              width:36, height:26, borderRadius:0,
               background:active?'rgba(255,255,255,0.14)':'transparent',
               transition:'background 0.18s',
               fontSize:16, lineHeight:1,
@@ -1575,7 +1745,7 @@ function NavBar({ page, setPage }) {
 }
 
 /* ══════════════════════════ ROOT APP ══════════════════════════ */
-/* ── VIPModal — VIP waiting list form (name/email/phone/social/bio) ── */
+/* ── VIPModal — waiting list form (name/email/phone/social/bio) ── */
 function VIPModal({ onClose, onJoin }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -1621,20 +1791,19 @@ function VIPModal({ onClose, onJoin }) {
     try { if (typeof window !== 'undefined' && typeof window.va === 'function') window.va('event', { name: 'VIP Signup' }); } catch (_) {}
     setTimeout(onClose, 3200);
   };
-  const field = { width:'100%', padding:'12px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.18)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, fontFamily:'Georgia,serif', outline:'none', marginBottom:10 };
+  const field = { width:'100%', padding:'12px 14px', borderRadius:0, border:'1px solid rgba(255,255,255,0.18)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, fontFamily:'Georgia,serif', outline:'none', marginBottom:10 };
   const lbl = { display:'block', textAlign:'left', fontFamily:IMP, fontSize:9, letterSpacing:2, color:'#fff', marginBottom:5 };
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:800, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:'#000', color:'#fff', borderRadius:18, width:440, maxWidth:'94vw', maxHeight:'92vh', overflowY:'auto', padding:'32px 30px 26px', position:'relative', boxShadow:'0 24px 80px rgba(0,0,0,0.55)', border:'1px solid rgba(255,255,255,0.08)' }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#000', color:'#fff', borderRadius:0, width:440, maxWidth:'94vw', maxHeight:'92vh', overflowY:'auto', padding:'32px 30px 26px', position:'relative', boxShadow:'0 24px 80px rgba(0,0,0,0.55)', border:'1px solid rgba(255,255,255,0.08)' }}>
         <button onClick={onClose} aria-label="Close" style={{ position:'absolute', top:14, right:16, background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer', lineHeight:1, zIndex:2 }}>{'\u2715'}</button>
         {!submitted ? (
           <>
             <div style={{ textAlign:'center' }}>
-              <div style={{ fontSize:30, marginBottom:10 }}>{'\uD83D\uDE80'}</div>
-              <div style={{ fontFamily:IMP, fontSize:11, letterSpacing:5, color:'#fff', opacity:0.5, marginBottom:12 }}>VIP WAITING LIST {'\u00B7'} COMING TO iOS</div>
+              <div style={{ fontFamily:IMP, fontSize:11, letterSpacing:5, color:'#fff', opacity:0.5, marginBottom:12 }}>WAITING LIST</div>
               <div style={{ fontFamily:IMP, fontSize:'clamp(23px,6vw,29px)', letterSpacing:1, lineHeight:1.08, marginBottom:12 }}>BE FIRST ON<br/>THE APP STORE</div>
               <div style={{ fontSize:13, lineHeight:1.55, color:'#fff', marginBottom:22, maxWidth:340, marginLeft:'auto', marginRight:'auto' }}>
-                Complete your profile to join the VIP waiting list. VIPs get in first {'\u2014'} we{'\u2019'}ll notify you the moment AUTOGRAFF hits the App Store, plus the drop date and first look at the designs.
+                Complete your profile to join the waiting list. You{'\u2019'}ll get in first {'\u2014'} we{'\u2019'}ll notify you the moment AUTOGRAFF hits the App Store, plus the drop date and first look at the designs.
               </div>
             </div>
             <label style={lbl}>NAME</label>
@@ -1650,9 +1819,9 @@ function VIPModal({ onClose, onJoin }) {
             <label style={lbl}>BIO</label>
             <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder="Tell us about you and your work..." rows={3}
               style={{ ...field, resize:'vertical', minHeight:72 }} />
-            <button onClick={submit} disabled={submitting} style={{ width:'100%', marginTop:6, padding:'15px', border:'none', borderRadius:10, background: submitting?'rgba(255,255,255,0.5)':'#fff', color:'#000', fontFamily:IMP, fontSize:15, letterSpacing:3, cursor: submitting?'default':'pointer', transition:'transform 0.15s' }}
+            <button onClick={submit} disabled={submitting} style={{ width:'100%', marginTop:6, padding:'15px', border:'none', borderRadius:0, background: submitting?'rgba(255,255,255,0.5)':'#fff', color:'#000', fontFamily:IMP, fontSize:15, letterSpacing:3, cursor: submitting?'default':'pointer', transition:'transform 0.15s' }}
               onMouseEnter={e=>{ if(!submitting) e.currentTarget.style.transform='scale(1.02)'; }} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
-              {submitting ? 'JOINING\u2026' : <>JOIN THE VIP LIST {'\u2192'}</>}
+              {submitting ? 'JOINING\u2026' : <>JOIN THE WAITING LIST {'\u2192'}</>}
             </button>
             <div style={{ marginTop:16, textAlign:'center', fontSize:10.5, color:'#fff', letterSpacing:1 }}>
               No spam, ever
@@ -1661,13 +1830,113 @@ function VIPModal({ onClose, onJoin }) {
         ) : (
           <div style={{ padding:'24px 0', textAlign:'center' }}>
             <div style={{ fontSize:42, marginBottom:14, color:'#3ad07a' }}>{'\u2713'}</div>
-            <div style={{ fontFamily:IMP, fontSize:24, letterSpacing:1, marginBottom:10 }}>YOU{'\u2019'}RE ON THE VIP LIST</div>
+            <div style={{ fontFamily:IMP, fontSize:24, letterSpacing:1, marginBottom:10 }}>YOU{'\u2019'}RE ON THE WAITING LIST</div>
             <div style={{ fontSize:13, lineHeight:1.55, color:'#fff', maxWidth:300, margin:'0 auto' }}>
               {name ? name.split(' ')[0] + ', you' : 'You'}{'\u2019'}re in. We{'\u2019'}ll email you the second AUTOGRAFF hits the App Store {'\u2014'} plus the drop date and first look at the designs. No spam, ever.
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Onboarding — creator (apply) / member (log in) / dev-bypass ── */
+const OB_WRAP = { width:'100%', height:'100%', background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'clamp(20px,6vw,60px)', textAlign:'center', overflowY:'auto' };
+const OB_FIELD = { width:'100%', padding:'13px 14px', borderRadius:0, border:'1px solid rgba(255,255,255,0.25)', background:'rgba(255,255,255,0.04)', color:'#fff', fontSize:14, outline:'none', fontFamily:HELV, marginBottom:10, boxSizing:'border-box' };
+const OB_LABEL = { fontFamily:HELV, fontSize:9, letterSpacing:3, color:'#8f8f8f', textTransform:'uppercase', textAlign:'left', marginBottom:6, marginTop:4 };
+const OB_PRIMARY = { width:'100%', marginTop:8, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'14px', fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' };
+function OnboardBack({ onBack }) {
+  return <button onClick={onBack} style={{ marginTop:18, background:'none', border:'none', color:'rgba(255,255,255,0.45)', fontFamily:HELV, fontSize:11, letterSpacing:2, cursor:'pointer', textTransform:'uppercase' }}>← Back</button>;
+}
+
+/* Creator application — reviewed by hand; lands in the same waitlist ledger, tagged. */
+function CreatorApply({ enter, onBack }) {
+  const [f, setF] = useState({ name:'', email:'', social:'', medium:'', link:'' });
+  const [sent, setSent] = useState(false);
+  const set = (k) => (e) => setF(p => ({ ...p, [k]: e.target.value }));
+  const submit = () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return;
+    try {
+      fetch('/api/vip', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name:f.name, email:f.email, social:f.social, bio:'CREATOR APPLICATION — medium: ' + f.medium + ' — portfolio: ' + f.link, role:'creator' }) });
+    } catch (_) {}
+    setSent(true);
+  };
+  if (sent) return (
+    <div style={OB_WRAP}>
+      <div style={{ fontFamily:IMP, fontSize:'clamp(26px,6vw,40px)', color:'#fff', letterSpacing:0.5 }}>Application received.</div>
+      <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:12, maxWidth:380, lineHeight:1.6 }}>We review every submission by hand. If your work fits, you’ll hear from us.</div>
+      <button onClick={() => enter('creator')} style={{ ...OB_PRIMARY, maxWidth:320, marginTop:24 }}>ENTER THE GALLERY</button>
+    </div>
+  );
+  return (
+    <div style={OB_WRAP}>
+      <div style={{ width:'100%', maxWidth:400 }}>
+        <div style={{ fontFamily:HELV, fontSize:11, letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:8, textAlign:'left' }}>Creator</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(24px,6vw,36px)', color:'#fff', letterSpacing:0.5, marginBottom:20, textAlign:'left' }}>Show us your work</div>
+        <div style={OB_LABEL}>Name</div><input style={OB_FIELD} value={f.name} onChange={set('name')} placeholder="Your name" />
+        <div style={OB_LABEL}>Email</div><input style={OB_FIELD} value={f.email} onChange={set('email')} placeholder="you@email.com" />
+        <div style={OB_LABEL}>Social / handle</div><input style={OB_FIELD} value={f.social} onChange={set('social')} placeholder="@handle" />
+        <div style={OB_LABEL}>Medium</div><input style={OB_FIELD} value={f.medium} onChange={set('medium')} placeholder="Graffiti, murals, photography…" />
+        <div style={OB_LABEL}>Portfolio link</div><input style={OB_FIELD} value={f.link} onChange={set('link')} placeholder="https://" />
+        <button onClick={submit} style={OB_PRIMARY}>SUBMIT APPLICATION</button>
+        <OnboardBack onBack={onBack} />
+      </div>
+    </div>
+  );
+}
+
+/* Member login — sign in to collect + support. Stub entry until the auth backend is wired. */
+function MemberLogin({ enter, onBack }) {
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  return (
+    <div style={OB_WRAP}>
+      <div style={{ width:'100%', maxWidth:360 }}>
+        <div style={{ fontFamily:HELV, fontSize:11, letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:8, textAlign:'left' }}>Member</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(24px,6vw,36px)', color:'#fff', letterSpacing:0.5, marginBottom:20, textAlign:'left' }}>Log in</div>
+        <input style={OB_FIELD} value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" autoComplete="username" />
+        <input style={OB_FIELD} value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type="password" autoComplete="current-password" />
+        <button onClick={() => { if (email.includes('@')) enter('member'); }} style={OB_PRIMARY}>LOG IN</button>
+        <OnboardBack onBack={onBack} />
+      </div>
+    </div>
+  );
+}
+
+/* ── OnboardPage — pick your lane, or dev-bypass into the platform ── */
+function OnboardPage({ setPage }) {
+  const [mode, setMode] = useState('choose');
+  const enter = (role) => { try { localStorage.setItem('autograff_role', role); } catch (_) {} setPage('guest'); };
+  if (mode === 'creator') return <CreatorApply enter={enter} onBack={() => setMode('choose')} />;
+  if (mode === 'member')  return <MemberLogin enter={enter} onBack={() => setMode('choose')} />;
+  const opts = [
+    { k:'creator', t:'CREATOR', d:'Show your work' },
+    { k:'member',  t:'MEMBER',  d:'Log in + collect' },
+  ];
+  return (
+    <div style={OB_WRAP}>
+      <div style={{ fontFamily:HELV, fontSize:11, letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:14 }}>Set up your dashboard</div>
+      <div style={{ fontFamily:IMP, fontSize:'clamp(28px,7vw,48px)', color:'#fff', letterSpacing:0.5, lineHeight:1, marginBottom:'clamp(28px,5vh,44px)', maxWidth:560 }}>How do you want to enter?</div>
+      <div style={{ display:'flex', gap:'clamp(12px,3vw,20px)', flexWrap:'wrap', justifyContent:'center', width:'100%', maxWidth:560 }}>
+        {opts.map(o => (
+          <button key={o.k} onClick={() => setMode(o.k)} style={{
+            flex:'1 1 200px', minWidth:170, background:'transparent', color:'#fff', border:'1px solid rgba(255,255,255,0.3)',
+            borderRadius:0, padding:'clamp(24px,5vw,40px) 20px', cursor:'pointer', transition:'all .25s', WebkitTapHighlightColor:'transparent',
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
+            onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#fff'; }}
+          >
+            <div style={{ fontFamily:IMP, fontSize:'clamp(20px,4vw,26px)', letterSpacing:2 }}>{o.t}</div>
+            <div style={{ fontFamily:HELV, fontSize:11, letterSpacing:1, marginTop:8, opacity:0.7 }}>{o.d}</div>
+          </button>
+        ))}
+      </div>
+      <button onClick={() => enter('dev')} style={{
+        marginTop:'clamp(28px,5vh,44px)', background:'none', border:'none', color:'rgba(255,255,255,0.45)',
+        fontFamily:HELV, fontSize:11, letterSpacing:2, cursor:'pointer', textTransform:'uppercase', WebkitTapHighlightColor:'transparent',
+      }}>Skip — dev bypass →</button>
     </div>
   );
 }
@@ -1687,7 +1956,7 @@ export default function App() {
     return () => { clearTimeout(timer); document.removeEventListener('mouseleave', onExit); };
   }, []);
   useEffect(() => {
-    // Manual opens (JOIN VIP button) always work, even after dismiss/join.
+    // Manual opens (WAITING LIST button) always work, even after dismiss/join.
     const manual = () => setShowVIP(true);
     window.addEventListener('open-vip', manual);
     return () => window.removeEventListener('open-vip', manual);
@@ -1706,14 +1975,14 @@ export default function App() {
   return (
     <div style={{ width:'100%', height:'100%', background:'#000', overflow:'hidden', position:'relative', color:'#fff' }}>
       {page==='splash'      && <SplashPage setPage={setPage} />}
+      {page==='onboard'      && <OnboardPage setPage={setPage} />}
       {page==='guest'        && <GuestPage setPage={setPage} />}
       {page==='photos'       && <PhotosPage setPage={setPage} />}
       {page==='leaderboard'  && <LeaderboardPage setPage={setPage} />}
       {page==='members'      && <MembersPage setPage={setPage} />}
       {page==='studio'       && <StudioPage setPage={setPage} />}
       {page==='profile'      && <ProfilePage setPage={setPage} />}
-      {page!=='splash'       && <NavBar page={page} setPage={setPage} />}
-      {page!=='splash'       && <VIPFab />}
+      {page!=='splash' && page!=='onboard' && <NavBar page={page} setPage={setPage} />}
       {showVIP && <VIPModal onClose={closeVIP} onJoin={joinVIP} />}
     </div>
   );
