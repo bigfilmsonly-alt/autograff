@@ -118,14 +118,14 @@ const SEED_PHOTOS = import.meta.env.DEV ? [
 ] : [];
 
 const MOCK_MEMBERS = import.meta.env.DEV ? [
-  { id:1, handle:'aurora_lens', name:'Aurora Lane', bio:'Capturing light & shadow. Miami based photographer.', score:8420, rank:'Gold', followers:1200, following:180, posts:SEED_PHOTOS.slice(0,4) },
-  { id:2, handle:'pixel_nomad', name:'Alex Nomad', bio:'Street art & travel. Always moving, always shooting.', score:5100, rank:'Gold', followers:890, following:220, posts:SEED_PHOTOS.slice(2,6) },
-  { id:3, handle:'shuttercraft', name:'Sam Craft', bio:'Urban geometry. Architecture through my lens.', score:3200, rank:'Silver', followers:670, following:340, posts:SEED_PHOTOS.slice(4,8) },
-  { id:4, handle:'frame_wolf', name:'Felix Wolf', bio:'Nature & wildlife. Film + digital hybrid.', score:1800, rank:'Silver', followers:430, following:190, posts:SEED_PHOTOS.slice(6,10) },
-  { id:5, handle:'lenscraft99', name:'Lena Cruz', bio:'Murals & public art across the Americas.', score:980, rank:'Bronze', followers:310, following:280, posts:SEED_PHOTOS.slice(8,12) },
-  { id:6, handle:'voidshooter', name:'Victor Odin', bio:'Minimalist compositions in urban spaces.', score:540, rank:'Bronze', followers:210, following:150, posts:SEED_PHOTOS.slice(10,13) },
-  { id:7, handle:'chromatic_eye', name:'Chroma Blake', bio:'Color theory in the wild.', score:310, rank:'Bronze', followers:125, following:90, posts:SEED_PHOTOS.slice(0,3) },
-  { id:8, handle:'stellarframe', name:'Stella Ray', bio:'Astrophotography meets street.', score:180, rank:'Bronze', followers:88, following:45, posts:SEED_PHOTOS.slice(5,8) },
+  { id:1, handle:'aurora_lens', name:'Aurora Lane', bio:'Capturing light & shadow. Miami based photographer.', score:8420, rank:'Diamond', followers:1200, following:180, posts:SEED_PHOTOS.slice(0,4) },
+  { id:2, handle:'pixel_nomad', name:'Alex Nomad', bio:'Street art & travel. Always moving, always shooting.', score:5100, rank:'Diamond', followers:890, following:220, posts:SEED_PHOTOS.slice(2,6) },
+  { id:3, handle:'shuttercraft', name:'Sam Craft', bio:'Urban geometry. Architecture through my lens.', score:3200, rank:'Platinum', followers:670, following:340, posts:SEED_PHOTOS.slice(4,8) },
+  { id:4, handle:'frame_wolf', name:'Felix Wolf', bio:'Nature & wildlife. Film + digital hybrid.', score:1800, rank:'Platinum', followers:430, following:190, posts:SEED_PHOTOS.slice(6,10) },
+  { id:5, handle:'lenscraft99', name:'Lena Cruz', bio:'Murals & public art across the Americas.', score:980, rank:'Gold', followers:310, following:280, posts:SEED_PHOTOS.slice(8,12) },
+  { id:6, handle:'voidshooter', name:'Victor Odin', bio:'Minimalist compositions in urban spaces.', score:540, rank:'Gold', followers:210, following:150, posts:SEED_PHOTOS.slice(10,13) },
+  { id:7, handle:'chromatic_eye', name:'Chroma Blake', bio:'Color theory in the wild.', score:310, rank:'Gold', followers:125, following:90, posts:SEED_PHOTOS.slice(0,3) },
+  { id:8, handle:'stellarframe', name:'Stella Ray', bio:'Astrophotography meets street.', score:180, rank:'Gold', followers:88, following:45, posts:SEED_PHOTOS.slice(5,8) },
 ] : [];
 
 const NAV_ITEMS = [
@@ -696,9 +696,9 @@ function ScrollRow({ photos, speed = 0.9, rowHeight: rh = 160, cardWidth: cw = 2
 /* ── MemberPortfolio ── */
 function MemberPortfolio({ member, onClose, onFollow, isFollowing }) {
   const [tab, setTab] = useState('photos');
-  const target = member.rank==='Gold'?10000:member.rank==='Silver'?5000:1000;
+  const target = member.rank==='Diamond'?10000:member.rank==='Platinum'?5000:1000;
   const pct = Math.min(100, Math.round(member.score/target*100));
-  const emoji = member.rank==='Gold'?'\uD83E\uDD47':member.rank==='Silver'?'\uD83E\uDD48':'\uD83E\uDD49';
+  const emoji = member.rank==='Diamond'?'◆':member.rank==='Platinum'?'◈':'◇';
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:600, background:'rgba(0,0,0,0.5)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:'#000', borderRadius:0, width:420, maxWidth:'92vw', maxHeight:'88vh', overflow:'auto', position:'relative' }}>
@@ -921,6 +921,7 @@ function PhotosPage({ setPage }) {
 /* ── LeaderboardPage ── */
 function LeaderboardPage({ setPage }) {
   const [view,setView]=useState('photos'); // 'photos' | 'supporters'
+  const [period,setPeriod]=useState('all'); // 'all' | 'daily' | 'monthly'
   const [voted,setVoted]=useState({});
   const [entries,setEntries]=useState([]);
   const [supporters,setSupporters]=useState([]);
@@ -932,7 +933,7 @@ function LeaderboardPage({ setPage }) {
     const load=()=>{
       Promise.all([
         fetch('/api/photos').then(r=>r.ok?r.json():{photos:[]}).catch(()=>({photos:[]})),
-        fetch('/api/likes').then(r=>r.ok?r.json():{likes:{},shares:{},likers:{},names:{}}).catch(()=>({likes:{},shares:{},likers:{},names:{}})),
+        fetch('/api/likes?period='+period).then(r=>r.ok?r.json():{likes:{},shares:{},likers:{},names:{}}).catch(()=>({likes:{},shares:{},likers:{},names:{}})),
       ]).then(([pd,ld])=>{
         if(!active) return;
         const seedIds=new Set(SEED_PHOTOS.map(p=>p.id));
@@ -951,7 +952,7 @@ function LeaderboardPage({ setPage }) {
     load();
     const poll=setInterval(load,2000);
     return()=>{active=false;clearInterval(poll);};
-  },[]);
+  },[period]);
   const maxVotes=entries[0]?.votes||1;
   const totalVotes=entries.reduce((s,e)=>s+e.votes,0);
   const totalShares=entries.reduce((s,e)=>s+(e.shares||0),0);
@@ -970,11 +971,17 @@ function LeaderboardPage({ setPage }) {
   const stagnant=supporters.filter(s=>s.score===0);
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
-      <PageHeader setPage={setPage} subtitle="THE LEDGER" />
-      <div style={{ padding:'6px clamp(14px,3vw,40px) 0', flexShrink:0 }}>
-        <p style={{ fontSize:10, color:'#fff', letterSpacing:0.5, margin:'0 0 8px' }}>
-          We support the liker, we like the supporter. Give love to climb — lurk and you sink.
-        </p>
+      <PageHeader setPage={setPage} subtitle="LEADERBOARD" />
+      <div style={{ padding:'8px clamp(14px,3vw,40px) 0', flexShrink:0 }}>
+        <div style={{ display:'flex', gap:6, marginBottom:8 }}>
+          {[{k:'daily',l:'DAILY'},{k:'monthly',l:'MONTHLY'},{k:'all',l:'ALL-TIME'}].map(t=>(
+            <button key={t.k} onClick={()=>setPeriod(t.k)} style={{
+              flex:1, padding:'8px 6px', borderRadius:0, cursor:'pointer', whiteSpace:'nowrap',
+              border:period===t.k?'1px solid #fff':'1px solid rgba(255,255,255,0.18)',
+              fontFamily:IMP, fontSize:10, letterSpacing:1,
+              background:period===t.k?'#fff':'transparent', color:period===t.k?'#000':'rgba(255,255,255,0.65)', transition:'all 0.2s' }}>{t.l}</button>
+          ))}
+        </div>
         <div style={{ display:'flex', gap:6 }}>
           {[{k:'photos',l:'MOST LIKED'},{k:'supporters',l:'TOP SUPPORTERS'}].map(t=>(
             <button key={t.k} onClick={()=>setView(t.k)} style={{
@@ -1114,7 +1121,8 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
   const [loved, setLoved] = useState(() => hasLiked(item.id));
   const [pop, setPop] = useState(false);
   const [following, setFollowing] = useState(() => isFollowing(item.creator));
-  const g = useRef({ moved:false, skip:false, sx:0, sy:0 });
+  const g = useRef({ moved:false, skip:false, sx:0, sy:0, hold:null, held:false });
+  useEffect(() => () => clearTimeout(g.current.hold), []);
   const c = counts || { likes:0, shares:0 };
   const love = (clientX, clientY, el) => {
     if (!loved) { setLoved(true); markLiked(item.id); }
@@ -1129,9 +1137,9 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
   const share = (e) => { e.stopPropagation(); onShare(item); };
   const expand = (e) => { e.stopPropagation(); onView(item); };
   const followBtn = (e) => { e.stopPropagation(); setFollowing(toggleFollow(item.creator)); };
-  const down = (e) => { const s2=g.current; s2.skip = !!(e.target.closest && e.target.closest('button')); s2.moved=false; s2.sx=e.clientX; s2.sy=e.clientY; };
-  const move = (e) => { const s2=g.current; if (Math.abs(e.clientX-s2.sx)>10 || Math.abs(e.clientY-s2.sy)>10) s2.moved=true; };
-  const up = (e) => { const s2=g.current; if (!s2.skip && !s2.moved) love(e.clientX, e.clientY, e.currentTarget); };  // TAP the picture = hearts explode + like
+  const down = (e) => { const s2=g.current; s2.skip = !!(e.target.closest && e.target.closest('button')); s2.moved=false; s2.held=false; s2.sx=e.clientX; s2.sy=e.clientY; clearTimeout(s2.hold); if(!s2.skip){ s2.hold=setTimeout(()=>{ s2.held=true; onView(item); }, 450); } };
+  const move = (e) => { const s2=g.current; if (Math.abs(e.clientX-s2.sx)>10 || Math.abs(e.clientY-s2.sy)>10){ s2.moved=true; clearTimeout(s2.hold); } };
+  const up = (e) => { const s2=g.current; clearTimeout(s2.hold); if (!s2.skip && !s2.moved && !s2.held) love(e.clientX, e.clientY, e.currentTarget); };  // quick TAP = hearts explode + like; HOLD = open detail
   return (
     <div data-gcard role="button" tabIndex={0}
       onPointerDown={down} onPointerMove={move} onPointerUp={up}
@@ -1170,7 +1178,6 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
 function FeaturedRail({ items, counts, onView, onLove, onShare }) {
   const ref = useRef(null);
   const pause = useRef(false);
-  const drag = useRef({ on:false, sx:0, sl:0 });
   const loop = items.length > 1 ? [...items, ...items, ...items] : items;
   useEffect(() => {
     const el = ref.current; if (!el || items.length < 2) return;
@@ -1179,20 +1186,20 @@ function FeaturedRail({ items, counts, onView, onLove, onShare }) {
       pos = el.scrollWidth / 3; el.scrollLeft = pos;
       const step = () => {
         if (pause.current) { pos = el.scrollLeft; }
-        else { pos += 0.25; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
+        else { pos += 0.55; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
         raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
     }, 160);
     return () => { clearTimeout(init); cancelAnimationFrame(raf); };
   }, [items]);
-  const down = (e) => { pause.current = true; if (e.pointerType === 'mouse' && ref.current) drag.current = { on:true, sx:e.clientX, sl:ref.current.scrollLeft }; };
-  const move = (e) => { if (drag.current.on && ref.current) ref.current.scrollLeft = drag.current.sl - (e.clientX - drag.current.sx); };
-  const end = () => { drag.current.on = false; setTimeout(() => { pause.current = false; }, 1400); };
+  // Finger on the belt -> it stops. Release -> it resumes. No manual finger-scrolling.
+  const pauseNow = () => { pause.current = true; };
+  const resumeSoon = () => { setTimeout(() => { pause.current = false; }, 700); };
   return (
-    <div ref={ref} onPointerDown={down} onPointerMove={move} onPointerUp={end} onPointerCancel={end}
-      onMouseEnter={() => { pause.current = true; }} onMouseLeave={() => { drag.current.on = false; pause.current = false; }}
-      style={{ display:'flex', gap:'clamp(12px,2vw,20px)', overflowX:'auto', scrollbarWidth:'none', padding:'6px clamp(14px,3vw,40px) 22px', WebkitOverflowScrolling:'touch', cursor:'grab' }}>
+    <div ref={ref} onPointerDown={pauseNow} onPointerUp={resumeSoon} onPointerCancel={resumeSoon}
+      onMouseEnter={pauseNow} onMouseLeave={resumeSoon}
+      style={{ display:'flex', gap:'clamp(12px,2vw,20px)', overflowX:'hidden', scrollbarWidth:'none', padding:'6px clamp(14px,3vw,40px) 22px', touchAction:'pan-y', cursor:'default' }}>
       {loop.map((item, i) => <GalleryCard key={item.id + '-' + i} item={item} counts={counts[item.id]} onView={onView} onLove={onLove} onShare={onShare} />)}
     </div>
   );
@@ -1246,7 +1253,7 @@ function GalleryLightbox({ item, counts, onClose, onLove, onShare, onCreator }) 
   return (
     <div data-lb onClick={onClose} style={{ position:'fixed', inset:0, zIndex:700, background:'rgba(0,0,0,0.96)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'clamp(16px,4vw,48px)', overflow:'hidden' }}>
       <button onClick={onClose} style={{ position:'absolute', top:16, right:16, width:34, height:34, borderRadius:0, border:'1px solid rgba(255,255,255,0.3)', background:'transparent', color:'#fff', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>✕</button>
-      <img src={item.src} alt={item.title} onClick={e=>e.stopPropagation()} style={{ maxWidth:'96vw', maxHeight:'58vh', objectFit:'contain', boxShadow:'0 30px 90px rgba(0,0,0,0.85)' }} />
+      <img src={item.src} alt={item.title} onClick={love} style={{ maxWidth:'96vw', maxHeight:'58vh', objectFit:'contain', boxShadow:'0 30px 90px rgba(0,0,0,0.85)', cursor:'pointer' }} />
       <FloatingHearts bursts={bursts} />
       <div onClick={e=>e.stopPropagation()} style={{ marginTop:16, textAlign:'center', maxWidth:520 }}>
         <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#b3b3b3', textTransform:'uppercase', marginBottom:6 }}>{item.category}</div>
@@ -1352,11 +1359,11 @@ function MembersPage({ setPage }) {
   const [following,setFollowing]=useState({});
   const [portfolio,setPortfolio]=useState(null);
   const [search,setSearch]=useState('');
-  const filters=['All','Gold','Silver','Bronze'];
+  const filters=['All','Diamond','Platinum','Gold'];
   const members=MOCK_MEMBERS
     .filter(m=>filter==='All'||m.rank===filter)
     .filter(m=>!search||m.name.toLowerCase().includes(search.toLowerCase())||m.handle.toLowerCase().includes(search.toLowerCase()));
-  const rankEmoji=(r)=>r==='Gold'?'\uD83E\uDD47':r==='Silver'?'\uD83E\uDD48':'\uD83E\uDD49';
+  const rankEmoji=(r)=>r==='Diamond'?'◆':r==='Platinum'?'◈':'◇';
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="MEMBERS" />
@@ -1645,9 +1652,9 @@ function ProfilePage({ setPage }) {
   const avatarRef=useRef(null);
   const totalLikes=uploads.reduce((s,p)=>s+(p.likes||0),0);
   const score=uploads.length*50+totalLikes*10+archived.length*5+collection.length*20;
-  const rank=score>=5000?'Gold':score>=1000?'Silver':'Bronze';
-  const rankEmoji=rank==='Gold'?'\uD83E\uDD47':rank==='Silver'?'\uD83E\uDD48':'\uD83E\uDD49';
-  const target=rank==='Gold'?10000:rank==='Silver'?5000:1000;
+  const rank=score>=5000?'Diamond':score>=1000?'Platinum':'Gold';
+  const rankEmoji=rank==='Diamond'?'\u25C6':rank==='Platinum'?'\u25C8':'\u25C7';
+  const target=rank==='Diamond'?10000:rank==='Platinum'?5000:1000;
   const progress=Math.min(100,Math.round(score/target*100));
   if (!member) return <LoginSetup setPage={setPage} onDone={(m)=>{ try { localStorage.setItem('autograff_member', JSON.stringify(m)); } catch(_){} setMember(m); }} />;
   const signOut=()=>{ try { localStorage.removeItem('autograff_member'); } catch(_){} setMember(null); };
