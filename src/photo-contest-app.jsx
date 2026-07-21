@@ -77,7 +77,10 @@ const makePlaceholder = (c1, c2, label, shapes = '') => {
 
 const LOGO_URI = '/at-mark-white.png';
 
-const SEED_PHOTOS = [
+// INTEGRITY: seed/mock data is gated behind import.meta.env.DEV — a compile-time
+// constant that is `false` in every production build, so these literals are dead-code-
+// eliminated and can NEVER render (or even ship) in production. Prod shows only real data.
+const SEED_PHOTOS = import.meta.env.DEV ? [
   { id:1,  src:'/photos/1-surfer.jpg',      type:'image', user:'aurora_lens',   title:'Big Wave',        likes:2340 },
   { id:2,  src:'/photos/2-leopards.jpg',     type:'image', user:'pixel_nomad',   title:'Wild Leopards',   likes:1870 },
   { id:3,  src:'/photos/3-miami-sunset.jpg', type:'image', user:'shuttercraft',  title:'Miami Sunset',    likes:1540 },
@@ -91,9 +94,9 @@ const SEED_PHOTOS = [
   { id:11, src:'/photos/11-secret.jpg',      type:'image', user:'lenscraft99',   title:'Secret Project',  likes:540 },
   { id:12, src:'/photos/12-vw-yellow.jpg',   type:'image', user:'shuttercraft',  title:'Yellow Buzz',     likes:1430 },
   { id:13, src:'/photos/13-miami-bay.jpg',   type:'image', user:'voidshooter',   title:'Bay View',        likes:1980 },
-];
+] : [];
 
-const MOCK_MEMBERS = [
+const MOCK_MEMBERS = import.meta.env.DEV ? [
   { id:1, handle:'aurora_lens', name:'Aurora Lane', bio:'Capturing light & shadow. Miami based photographer.', score:8420, rank:'Gold', followers:1200, following:180, posts:SEED_PHOTOS.slice(0,4) },
   { id:2, handle:'pixel_nomad', name:'Alex Nomad', bio:'Street art & travel. Always moving, always shooting.', score:5100, rank:'Gold', followers:890, following:220, posts:SEED_PHOTOS.slice(2,6) },
   { id:3, handle:'shuttercraft', name:'Sam Craft', bio:'Urban geometry. Architecture through my lens.', score:3200, rank:'Silver', followers:670, following:340, posts:SEED_PHOTOS.slice(4,8) },
@@ -102,7 +105,7 @@ const MOCK_MEMBERS = [
   { id:6, handle:'voidshooter', name:'Victor Odin', bio:'Minimalist compositions in urban spaces.', score:540, rank:'Bronze', followers:210, following:150, posts:SEED_PHOTOS.slice(10,13) },
   { id:7, handle:'chromatic_eye', name:'Chroma Blake', bio:'Color theory in the wild.', score:310, rank:'Bronze', followers:125, following:90, posts:SEED_PHOTOS.slice(0,3) },
   { id:8, handle:'stellarframe', name:'Stella Ray', bio:'Astrophotography meets street.', score:180, rank:'Bronze', followers:88, following:45, posts:SEED_PHOTOS.slice(5,8) },
-];
+] : [];
 
 const NAV_ITEMS = [
   { key:'guest',       label:'EXPLORE',  icon:'\uD83D\uDD0D' },
@@ -1575,7 +1578,6 @@ function VIPModal({ onClose, onJoin }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errMsg, setErrMsg] = useState('');
-  const [spots] = useState(() => 34 + Math.floor(Math.random() * 13));
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const error = !!errMsg;
   const submit = async () => {
@@ -1645,9 +1647,8 @@ function VIPModal({ onClose, onJoin }) {
               onMouseEnter={e=>{ if(!submitting) e.currentTarget.style.transform='scale(1.02)'; }} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
               {submitting ? 'JOINING\u2026' : <>JOIN THE VIP LIST {'\u2192'}</>}
             </button>
-            <div style={{ marginTop:16, display:'flex', alignItems:'center', justifyContent:'center', gap:8, fontSize:10.5, color:'#fff', letterSpacing:1 }}>
-              <span style={{ width:6, height:6, borderRadius:'50%', background:'#3ad07a', boxShadow:'0 0 8px #3ad07a' }} />
-              {spots} creators joined today {'\u00B7'} No spam, ever
+            <div style={{ marginTop:16, textAlign:'center', fontSize:10.5, color:'#fff', letterSpacing:1 }}>
+              No spam, ever
             </div>
           </>
         ) : (

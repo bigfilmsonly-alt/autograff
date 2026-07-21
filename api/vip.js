@@ -1,4 +1,5 @@
 import { kv } from '@vercel/kv';
+import { Resend } from 'resend';
 
 /*
  * VIP waiting list enrollment.
@@ -26,6 +27,41 @@ async function notifySignup(record, count) {
     });
   } catch (e) {
     console.error('notifySignup failed', e);
+  }
+}
+
+// Real confirmation email — keeps the "we'll email you" promise the UI makes.
+// No-op if RESEND_API_KEY is unset, so a signup NEVER fails because of email.
+// Minimal black/white, Helvetica, no template chrome.
+async function sendConfirmation(record) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return { sent: false, reason: 'RESEND_API_KEY not set' };
+  try {
+    const resend = new Resend(apiKey);
+    const from = process.env.RESEND_FROM || 'AUTOGRAFF <onboarding@resend.dev>';
+    const first = String(record.name || '').trim().split(/\s+/)[0];
+    const hi = first ? `${first},` : '';
+    const text =
+      (hi ? `${hi}\n\n` : '') +
+      `You're on the list.\n\n` +
+      `AUTOGRAFF is invitation-only. We'll email you when it opens — nothing before, nothing after.\n\n` +
+      `No spam, ever.\n\n— AUTOGRAFF`;
+    const html =
+      `<div style="background:#000;color:#fff;font-family:Helvetica,Arial,sans-serif;padding:48px 28px;line-height:1.6;max-width:520px">` +
+      (hi ? `<p style="margin:0 0 20px">${hi}</p>` : '') +
+      `<p style="margin:0 0 20px;font-family:Impact,Helvetica,sans-serif;font-size:22px;letter-spacing:1px">YOU'RE ON THE LIST.</p>` +
+      `<p style="margin:0 0 20px;color:#b3b3b3">AUTOGRAFF is invitation-only. We'll email you when it opens — nothing before, nothing after.</p>` +
+      `<p style="margin:0 0 28px;color:#b3b3b3">No spam, ever.</p>` +
+      `<p style="margin:0;color:#666;letter-spacing:2px;font-size:12px">— AUTOGRAFF</p>` +
+      `</div>`;
+    const { data, error } = await resend.emails.send({
+      from, to: record.email, subject: "You're on the AUTOGRAFF list", text, html,
+    });
+    if (error) return { sent: false, reason: error.message || String(error) };
+    return { sent: true, id: data?.id };
+  } catch (e) {
+    console.error('sendConfirmation failed', e);
+    return { sent: false, reason: String(e?.message || e) };
   }
 }
 
@@ -78,5 +114,6 @@ export default async function handler(req, res) {
   await kv.lpush('vip_signups', record);
   const count = await kv.llen('vip_signups');
   notifySignup(record, count).catch(() => {});
-  return res.status(200).json({ ok: true, count });
+  const email = await sendConfirmation(record);
+  return res.status(200).json({ ok: true, count, email });
 }
