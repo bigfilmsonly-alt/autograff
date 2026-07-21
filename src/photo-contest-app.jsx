@@ -1151,7 +1151,7 @@ function FeaturedRail({ items, counts, onView, onLove, onShare }) {
       pos = el.scrollWidth / 3; el.scrollLeft = pos;
       const step = () => {
         if (pause.current) { pos = el.scrollLeft; }
-        else { pos += 0.4; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
+        else { pos += 0.25; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
         raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
@@ -1179,7 +1179,10 @@ function GalleryHero({ items, onOpen }) {
   return (
     <div style={{ position:'relative', width:'100%', height:'clamp(190px,36vh,480px)', overflow:'hidden', background:'#000', flexShrink:0 }}>
       {items.map((it, i) => (
-        <img key={it.id} src={it.src} alt="" aria-hidden={i!==idx} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', opacity:i===idx?1:0, transition:'opacity 1.2s ease' }} />
+        <div key={it.id} aria-hidden={i!==idx} style={{ position:'absolute', inset:0, opacity:i===idx?1:0, transition:'opacity 1.2s ease' }}>
+          <img src={it.src} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', filter:'blur(34px) brightness(0.42)', transform:'scale(1.18)' }} />
+          <img src={it.src} alt={it.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain' }} />
+        </div>
       ))}
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, rgba(0,0,0,0.26) 0%, transparent 22%, transparent 54%, rgba(0,0,0,0.88) 100%)' }} />
       <div style={{ position:'absolute', left:'clamp(16px,4vw,52px)', right:'clamp(16px,4vw,52px)', bottom:'clamp(14px,3vh,34px)' }}>
@@ -1291,9 +1294,9 @@ function GuestPage({ setPage }) {
       <PageHeader setPage={setPage} subtitle="GALLERY" right={
         <button onClick={openVIP} style={{ background:'#fff', color:'#000', border:'none', padding:'9px 18px', borderRadius:0, fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>REQUEST ACCESS</button>
       } />
-      <Marquee bg="#0b0b0b" dur={40} text={'YOU’RE #' + waitlistNumber() + ' IN LINE FOR AUTOGRAFF      —      INVITATION-ONLY, EARNED NOT BOUGHT      —      CLAIM YOUR SPOT BEFORE THE DOORS CLOSE      —      '} />
+      <Marquee bg="#0b0b0b" dur={80} text={'YOU’RE #' + waitlistNumber() + ' IN LINE FOR AUTOGRAFF      —      INVITATION-ONLY, EARNED NOT BOUGHT      —      CLAIM YOUR SPOT BEFORE THE DOORS CLOSE      —      '} />
       <GalleryHero items={GALLERY} onOpen={setLightbox} />
-      <Marquee dur={46} color="#cfcfcf" text={CATEGORIES.map(c => c.toUpperCase()).join('      ·      ') + '      ·      '} />
+      <Marquee dur={90} color="#cfcfcf" text={CATEGORIES.map(c => c.toUpperCase()).join('      ·      ') + '      ·      '} />
       <div style={{ padding:'14px 0 4px clamp(14px,3vw,40px)', flexShrink:0 }}>
         <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'#fff' }}>— MOST LOVED</div>
         <FeaturedRail items={ranked} counts={counts} onView={setLightbox} onLove={onLove} onShare={onShare} />
@@ -1713,6 +1716,7 @@ function NavBar({ page, setPage }) {
       position:'fixed', bottom:0, left:0, right:0, zIndex:200,
       display:'flex', alignItems:'flex-start',
       paddingTop:10,
+      paddingLeft:'env(safe-area-inset-left)', paddingRight:'env(safe-area-inset-right)',
       paddingBottom:'max(14px, env(safe-area-inset-bottom, 14px))',
       background:'#000', borderTop:'0.5px solid rgba(255,255,255,0.1)',
     }}>
@@ -1973,7 +1977,7 @@ export default function App() {
   // to the truly visible area — 100vh would overshoot by the height of iOS Safari's URL
   // bar, and #root's overflow:hidden would clip the difference away unreachably.
   return (
-    <div style={{ width:'100%', height:'100%', background:'#000', overflow:'hidden', position:'relative', color:'#fff' }}>
+    <div style={{ width:'100%', height:'100%', background:'#000', overflow:'hidden', position:'relative', color:'#fff', paddingLeft:'env(safe-area-inset-left)', paddingRight:'env(safe-area-inset-right)' }}>
       {page==='splash'      && <SplashPage setPage={setPage} />}
       {page==='onboard'      && <OnboardPage setPage={setPage} />}
       {page==='guest'        && <GuestPage setPage={setPage} />}
