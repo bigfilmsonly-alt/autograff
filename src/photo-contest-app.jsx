@@ -1150,7 +1150,7 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, transparent 44%, rgba(0,0,0,0.82) 100%)' }} />
       <FloatingHearts bursts={bursts} />
       <button onClick={expand} title="View" style={{ position:'absolute', top:12, right:12, background:'rgba(0,0,0,0.45)', border:'1px solid rgba(255,255,255,0.25)', color:'#fff', fontFamily:IMP, fontSize:9, letterSpacing:2, padding:'5px 10px', borderRadius:0, cursor:'pointer' }}>VIEW</button>
-      <div style={{ position:'absolute', left:16, right:92, bottom:14, pointerEvents:'none' }}>
+      <div style={{ position:'absolute', left:0, right:0, bottom:14, textAlign:'center', padding:'0 clamp(52px,16vw,74px)', pointerEvents:'none' }}>
         <div style={{ fontFamily:HELV, fontSize:9, letterSpacing:3, color:'#c9c9c9', textTransform:'uppercase', marginBottom:4 }}>{item.category}</div>
         <div style={{ fontFamily:IMP, fontSize:'clamp(15px,3.2vw,21px)', color:'#fff', letterSpacing:0.4, lineHeight:1 }}>{item.title}</div>
         <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:1, color:'#8f8f8f', marginTop:5 }}>{item.creator}</div>
@@ -1220,10 +1220,10 @@ function GalleryHero({ items, onOpen }) {
         </div>
       ))}
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, rgba(0,0,0,0.26) 0%, transparent 22%, transparent 54%, rgba(0,0,0,0.88) 100%)' }} />
-      <div style={{ position:'absolute', left:'clamp(16px,4vw,52px)', right:'clamp(16px,4vw,52px)', bottom:'clamp(14px,3vh,34px)' }}>
-        <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#d8d8d8', textTransform:'uppercase', marginBottom:6 }}>{cur.category}</div>
-        <div style={{ fontFamily:IMP, fontSize:'clamp(22px,6vw,50px)', color:'#fff', letterSpacing:0.5, lineHeight:0.98, maxWidth:640 }}>{cur.title}</div>
-        <button onClick={() => onOpen(cur)} style={{ marginTop:11, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'10px 24px', fontFamily:IMP, fontSize:12, letterSpacing:2, cursor:'pointer' }}>VIEW</button>
+      <div style={{ position:'absolute', left:0, right:0, bottom:'clamp(12px,2.5vh,28px)', textAlign:'center', padding:'0 clamp(16px,4vw,52px)' }}>
+        <div style={{ fontFamily:HELV, fontSize:9, letterSpacing:4, color:'#d8d8d8', textTransform:'uppercase', marginBottom:5 }}>{cur.category}</div>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(15px,3.6vw,26px)', color:'#fff', letterSpacing:0.5, lineHeight:1 }}>{cur.title}</div>
+        <button onClick={() => onOpen(cur)} style={{ marginTop:9, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'8px 22px', fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>VIEW</button>
       </div>
       {items.length > 1 && (
         <div style={{ position:'absolute', right:'clamp(16px,4vw,52px)', top:'clamp(12px,2.5vh,24px)', display:'flex', gap:6 }}>
@@ -1333,7 +1333,7 @@ function GuestPage({ setPage }) {
       <GalleryHero items={GALLERY} onOpen={setLightbox} />
       <Marquee dur={90} color="#cfcfcf" text={CATEGORIES.map(c => c.toUpperCase()).join('      ·      ') + '      ·      '} />
       <div style={{ padding:'10px 0 2px clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>— MOST LOVED</div>
+        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff', textAlign:'center', paddingRight:'clamp(14px,3vw,40px)' }}>MOST LOVED</div>
         <FeaturedRail items={ranked} counts={counts} onView={setLightbox} onLove={onLove} onShare={onShare} />
       </div>
       <div style={{ margin:'12px clamp(14px,3vw,40px) 0', border:'1px solid rgba(255,255,255,0.14)', padding:'clamp(22px,4vw,34px)', textAlign:'center', flexShrink:0, background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 13px)' }}>
@@ -1342,9 +1342,9 @@ function GuestPage({ setPage }) {
         <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:10, maxWidth:420, marginLeft:'auto', marginRight:'auto', lineHeight:1.6 }}>Post your work. Collect love on the board. The most-loved pieces win.</div>
         <button onClick={()=>setPage('photos')} style={{ marginTop:16, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'13px 34px', fontFamily:IMP, fontSize:13, letterSpacing:2, cursor:'pointer' }}>POST NOW {'→'}</button>
       </div>
-      <div style={{ margin:'8px clamp(14px,3vw,40px) 110px', borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:28, flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5vw,30px)', color:'#fff', letterSpacing:0.5, lineHeight:1.05, maxWidth:520 }}>A gallery for work made to be seen.</div>
-        <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:12, lineHeight:1.6, maxWidth:460 }}>AUTOGRAFF is a curated, invitation-only home for graffiti, murals, photography, automotive, film and the culture around them — presented the way it was meant to be viewed.</div>
+      <div style={{ margin:'8px clamp(14px,3vw,40px) 110px', borderTop:'1px solid rgba(255,255,255,0.12)', paddingTop:28, flexShrink:0, textAlign:'center' }}>
+        <div style={{ fontFamily:IMP, fontSize:'clamp(20px,5vw,30px)', color:'#fff', letterSpacing:0.5, lineHeight:1.05, maxWidth:520, marginLeft:'auto', marginRight:'auto' }}>A gallery for work made to be seen.</div>
+        <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:12, lineHeight:1.6, maxWidth:460, marginLeft:'auto', marginRight:'auto' }}>AUTOGRAFF is a curated, invitation-only home for graffiti, murals, photography, automotive, film and the culture around them — presented the way it was meant to be viewed.</div>
         <button onClick={openVIP} style={{ marginTop:20, background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'13px 30px', fontFamily:IMP, fontSize:12, letterSpacing:2, cursor:'pointer' }}>REQUEST ACCESS</button>
       </div>
       {lightbox && <GalleryLightbox item={lightbox} counts={counts[lightbox.id]} onClose={() => setLightbox(null)} onLove={onLove} onShare={onShare} onCreator={(h) => { setLightbox(null); setCreator(h); }} />}
