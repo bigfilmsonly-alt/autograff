@@ -18,7 +18,8 @@ export default async function handler(req, res) {
         kv.hgetall('liker_scores'),
         kv.hgetall('liker_names'),
       ]);
-      res.setHeader('Cache-Control', 'public, s-maxage=5, stale-while-revalidate=30');
+      // Always fresh — the leaderboard must reflect a like the instant it lands.
+      res.setHeader('Cache-Control', 'no-store');
       return res.status(200).json({ likes: likes || {}, likers: likers || {}, names: names || {} });
     }
     if (req.method === 'POST') {
