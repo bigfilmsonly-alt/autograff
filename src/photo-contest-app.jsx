@@ -1038,6 +1038,24 @@ function GuestPage({ setPage }) {
   const [expandedTile, setExpandedTile] = useState(null);
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
+  // Real uploads + real like counts drive Explore. No seed, no invented numbers.
+  const [feed, setFeed] = useState([]);
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetch('/api/photos').then(r => r.ok ? r.json() : { photos: [] }).catch(() => ({ photos: [] })),
+      fetch('/api/likes').then(r => r.ok ? r.json() : { likes: {} }).catch(() => ({ likes: {} })),
+    ]).then(([pd, ld]) => {
+      if (!active) return;
+      const deltas = (ld && ld.likes) || {};
+      setFeed((Array.isArray(pd.photos) ? pd.photos : [])
+        .filter(p => p && p.src)
+        .map(p => ({ ...p, likes: (p.likes || 0) + Number(deltas[p.id] || 0) })));
+    });
+    return () => { active = false; };
+  }, []);
+  const mostRecent = feed;                                    // KV returns newest-first
+  const topRated = [...feed].sort((a, b) => b.likes - a.likes);
   const benefits = [
     { icon:'\uD83D\uDCF7', title:'UPLOAD' },
     { icon:'\u2764\uFE0F', title:'GET LIKES' },
@@ -1062,26 +1080,20 @@ function GuestPage({ setPage }) {
           ))}
         </div>
       </div>
-      {/* Trending Now */}
-      <div style={{ padding:'14px 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} {'\uD83D\uDD25'} TRENDING NOW</div>
-        <ScrollRow photos={SEED_PHOTOS} speed={0.7} rowHeight={190} cardWidth={280} />
-      </div>
-      {/* Stats bar */}
-      <div style={{ margin:'14px clamp(14px,3vw,40px)', background:'#000', borderRadius:12, padding:'14px 0',
-        display:'grid', gridTemplateColumns:'repeat(4,1fr)', flexShrink:0 }}>
-        {[{v:'12K+',l:'MEMBERS'},{v:'48K+',l:'PHOTOS'},{v:'200K+',l:'LIKES TODAY'},{v:'Daily',l:'WINNERS'}].map((s,i)=>(
-          <div key={s.l} style={{ textAlign:'center', padding:'0 8px', borderRight:i<3?'1px solid rgba(255,255,255,0.1)':'none' }}>
-            <div style={{ fontFamily:IMP, fontSize:16, color:'#fff', fontWeight:700 }}>{s.v}</div>
-            <div style={{ fontSize:8, color:'#fff', letterSpacing:2, marginTop:2 }}>{s.l}</div>
-          </div>
-        ))}
-      </div>
-      {/* Most Recent */}
-      <div style={{ padding:'0 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} {'\uD83C\uDD95'} MOST RECENT</div>
-        <ScrollRow photos={[...SEED_PHOTOS].reverse()} speed={1.1} rowHeight={150} cardWidth={240} />
-      </div>
+      {/* Trending \u2014 real uploads ranked by real likes. Hidden until there is content. */}
+      {topRated.length > 0 && (
+        <div style={{ padding:'14px 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
+          <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} TRENDING NOW</div>
+          <ScrollRow photos={topRated} speed={0.7} rowHeight={190} cardWidth={280} />
+        </div>
+      )}
+      {/* Most Recent \u2014 newest uploads first. */}
+      {mostRecent.length > 0 && (
+        <div style={{ padding:'14px 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
+          <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} MOST RECENT</div>
+          <ScrollRow photos={mostRecent} speed={1.1} rowHeight={150} cardWidth={240} />
+        </div>
+      )}
       {/* Member Benefits */}
       <div style={{ padding:'18px clamp(14px,3vw,40px)', flexShrink:0 }}>
         <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:12, color:'#fff' }}>{'\u2014'} MEMBER BENEFITS</div>
@@ -1098,11 +1110,6 @@ function GuestPage({ setPage }) {
             </div>
           ))}
         </div>
-      </div>
-      {/* Top Rated */}
-      <div style={{ padding:'0 0 0 clamp(14px,3vw,40px)', flexShrink:0 }}>
-        <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff' }}>{'\u2014'} {'\u2B50'} TOP RATED</div>
-        <ScrollRow photos={[...SEED_PHOTOS.slice(3),...SEED_PHOTOS.slice(0,3)]} speed={1.4} rowHeight={140} cardWidth={200} />
       </div>
       {/* App Store coming soon */}
       <AppStoreBanner style={{ margin:'20px clamp(14px,3vw,40px) 0' }} />
