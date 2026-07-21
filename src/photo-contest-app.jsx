@@ -1571,7 +1571,36 @@ function StudioPage({ setPage }) {
 }
 
 /* ── ProfilePage ── */
+/* Account login / signup for the YOU tab — autofill-ready: real <form>, proper
+   input types + autocomplete so iOS/Safari + password managers fill and save it. */
+function LoginSetup({ onDone, setPage }) {
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+  const submit = (e) => { e.preventDefault(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) onDone({ email }); };
+  return (
+    <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
+      <PageHeader setPage={setPage} subtitle="YOU" />
+      <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'clamp(20px,6vw,60px) clamp(16px,4vw,40px) 120px' }}>
+        <div style={{ width:'100%', maxWidth:360 }}>
+          <div style={{ fontFamily:HELV, fontSize:11, letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:8 }}>{mode==='login'?'Welcome back':'Join AUTOGRAFF'}</div>
+          <div style={{ fontFamily:IMP, fontSize:'clamp(26px,7vw,40px)', color:'#fff', letterSpacing:0.5, marginBottom:22 }}>{mode==='login'?'Log in':'Create account'}</div>
+          <form onSubmit={submit}>
+            <input type="email" name="email" autoComplete="username" inputMode="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" style={OB_FIELD} />
+            <input type="password" name="password" autoComplete={mode==='login'?'current-password':'new-password'} value={pw} onChange={e=>setPw(e.target.value)} placeholder="Password" style={OB_FIELD} />
+            <button type="submit" style={{ ...OB_PRIMARY, marginTop:6 }}>{mode==='login'?'LOG IN':'CREATE ACCOUNT'}</button>
+          </form>
+          <button onClick={()=>setMode(mode==='login'?'signup':'login')} style={{ marginTop:16, background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontFamily:HELV, fontSize:12, letterSpacing:1, cursor:'pointer' }}>
+            {mode==='login'?'New here? Create an account':'Have an account? Log in'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfilePage({ setPage }) {
+  const [member,setMember]=useState(()=>{ try { return JSON.parse(localStorage.getItem('autograff_member')||'null'); } catch(_) { return null; } });
   const [avatar,setAvatar]=useState(null);
   const [username,setUsername]=useState('your_tag');
   const [editingName,setEditingName]=useState(false);
@@ -1587,9 +1616,15 @@ function ProfilePage({ setPage }) {
   const rankEmoji=rank==='Gold'?'\uD83E\uDD47':rank==='Silver'?'\uD83E\uDD48':'\uD83E\uDD49';
   const target=rank==='Gold'?10000:rank==='Silver'?5000:1000;
   const progress=Math.min(100,Math.round(score/target*100));
+  if (!member) return <LoginSetup setPage={setPage} onDone={(m)=>{ try { localStorage.setItem('autograff_member', JSON.stringify(m)); } catch(_){} setMember(m); }} />;
+  const signOut=()=>{ try { localStorage.removeItem('autograff_member'); } catch(_){} setMember(null); };
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="MEMBER PROFILE" />
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px clamp(14px,3vw,40px)', borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 }}>
+        <span style={{ fontFamily:HELV, fontSize:11, color:'#8f8f8f', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>Signed in as {member.email}</span>
+        <button onClick={signOut} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.55)', fontFamily:IMP, fontSize:10, letterSpacing:2, cursor:'pointer', flexShrink:0, marginLeft:10 }}>LOG OUT</button>
+      </div>
       <div style={{ flex:1, overflow:'auto', padding:'16px clamp(14px,3vw,40px) 100px' }}>
         {/* Profile card */}
         <div style={{ border:'1px solid rgba(255,255,255,0.12)', borderRadius:0, padding:'20px 16px', marginBottom:16, display:'flex', alignItems:'flex-start', gap:14 }}>
@@ -1908,14 +1943,14 @@ function MemberLogin({ enter, onBack }) {
   const [pw, setPw] = useState('');
   return (
     <div style={OB_WRAP}>
-      <div style={{ width:'100%', maxWidth:360 }}>
+      <form onSubmit={(e)=>{ e.preventDefault(); if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { try { localStorage.setItem('autograff_member', JSON.stringify({ email })); } catch(_){} enter('member'); } }} style={{ width:'100%', maxWidth:360 }}>
         <div style={{ fontFamily:HELV, fontSize:11, letterSpacing:5, color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:8, textAlign:'left' }}>Member</div>
         <div style={{ fontFamily:IMP, fontSize:'clamp(24px,6vw,36px)', color:'#fff', letterSpacing:0.5, marginBottom:20, textAlign:'left' }}>Log in</div>
-        <input style={OB_FIELD} value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" autoComplete="username" />
-        <input style={OB_FIELD} value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type="password" autoComplete="current-password" />
-        <button onClick={() => { if (email.includes('@')) enter('member'); }} style={OB_PRIMARY}>LOG IN</button>
+        <input style={OB_FIELD} value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" name="email" autoComplete="username" inputMode="email" />
+        <input style={OB_FIELD} value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" type="password" name="password" autoComplete="current-password" />
+        <button type="submit" style={OB_PRIMARY}>LOG IN</button>
         <OnboardBack onBack={onBack} />
-      </div>
+      </form>
     </div>
   );
 }
