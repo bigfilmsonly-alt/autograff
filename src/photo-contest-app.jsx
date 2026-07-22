@@ -1146,27 +1146,26 @@ function GalleryCard({ item, counts, onView, onLove, onShare }) {
       onMouseEnter={e => { const cc=e.currentTarget; cc.style.transform='scale(1.035)'; cc.style.boxShadow='0 28px 66px rgba(0,0,0,0.72)'; cc.style.filter='brightness(1.07)'; }}
       onMouseLeave={e => { const cc=e.currentTarget; cc.style.transform='scale(1)'; cc.style.boxShadow='0 4px 18px rgba(0,0,0,0.45)'; cc.style.filter='none'; }}
       style={{ width:'clamp(260px,74vw,600px)', aspectRatio:'16 / 9', flexShrink:0, position:'relative', overflow:'hidden', borderRadius:0, cursor:'pointer', background:'#070707', userSelect:'none', WebkitUserSelect:'none', WebkitTapHighlightColor:'transparent', boxShadow:'0 4px 18px rgba(0,0,0,0.45)', transition:'transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .34s ease, filter .34s ease' }}>
-      <img src={item.src} alt={item.title} loading="lazy" draggable={false} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', background:'#070707', pointerEvents:'none' }} />
+      <img src={item.src} alt={item.title} loading="lazy" draggable={false} style={{ width:'100%', height:'100%', objectFit:'contain', display:'block', background:'#070707', pointerEvents:'none', filter:'brightness(1.12) saturate(1.06)' }} />
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, transparent 44%, rgba(0,0,0,0.82) 100%)' }} />
       <FloatingHearts bursts={bursts} />
-      <button onClick={expand} title="View" style={{ position:'absolute', top:12, right:12, background:'rgba(0,0,0,0.45)', border:'1px solid rgba(255,255,255,0.25)', color:'#fff', fontFamily:IMP, fontSize:9, letterSpacing:2, padding:'5px 10px', borderRadius:0, cursor:'pointer' }}>VIEW</button>
       <div style={{ position:'absolute', left:0, right:0, bottom:14, textAlign:'center', padding:'0 clamp(52px,16vw,74px)', pointerEvents:'none' }}>
         <div style={{ fontFamily:HELV, fontSize:9, letterSpacing:3, color:'#c9c9c9', textTransform:'uppercase', marginBottom:4 }}>{item.category}</div>
         <div style={{ fontFamily:IMP, fontSize:'clamp(15px,3.2vw,21px)', color:'#fff', letterSpacing:0.4, lineHeight:1 }}>{item.title}</div>
         <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:1, color:'#8f8f8f', marginTop:5 }}>{item.creator}</div>
       </div>
-      <div style={{ position:'absolute', right:14, bottom:14, display:'flex', flexDirection:'column', gap:12, alignItems:'center' }}>
-        <button onClick={heartBtn} title="Love" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
-          <span style={{ display:'block', transform: pop?'scale(1.4)':'scale(1)', transition:'transform 0.18s cubic-bezier(0.2,1.6,0.4,1)' }}><HeartIcon filled={loved} size={30} /></span>
-          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)', display:'block', transform: pop?'scale(1.3)':'scale(1)', transition:'transform 0.18s' }}>{fmtN(c.likes)}</span>
+      <div style={{ position:'absolute', right:12, bottom:12, display:'flex', flexDirection:'column', gap:15, alignItems:'center' }}>
+        <button onClick={heartBtn} title="Love" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+          <span style={{ display:'block', transform: pop?'scale(1.4)':'scale(1)', transition:'transform 0.2s cubic-bezier(0.2,1.6,0.4,1)', filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.75))' }}><HeartIcon filled={loved} size={27} /></span>
+          <span style={{ fontFamily:IMP, fontSize:12, color:'#fff', textShadow:'0 1px 7px rgba(0,0,0,0.95)', transform: pop?'scale(1.3)':'scale(1)', transition:'transform 0.2s' }}>{fmtN(c.likes)}</span>
         </button>
-        <button onClick={share} title="Share" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
-          <span style={{ fontSize:21, color:'#fff', lineHeight:1, filter:'drop-shadow(0 1px 4px rgba(0,0,0,0.5))' }}>↗</span>
-          <span style={{ fontFamily:IMP, fontSize:11, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)' }}>{fmtN(c.shares)}</span>
+        <button onClick={share} title="Share" style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+          <span style={{ fontSize:20, color:'#fff', lineHeight:1, filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.75))' }}>↗</span>
+          <span style={{ fontFamily:IMP, fontSize:12, color:'#fff', textShadow:'0 1px 7px rgba(0,0,0,0.95)' }}>{fmtN(c.shares)}</span>
         </button>
-        <button onClick={followBtn} title={following?'Following':'Follow'} style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
-          <span style={{ width:26, height:26, borderRadius:0, border:'2px solid #fff', background:following?'#fff':'transparent', color:following?'#000':'#fff', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:IMP, fontSize:15, lineHeight:1 }}>{following?'✓':'+'}</span>
-          <span style={{ fontFamily:IMP, fontSize:8.5, color:'#fff', textShadow:'0 1px 4px rgba(0,0,0,0.65)', letterSpacing:0.5 }}>{following?'FOLLOWING':'FOLLOW'}</span>
+        <button onClick={followBtn} title={following?'Following':'Follow'} style={{ background:'none', border:'none', padding:0, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+          <span style={{ fontSize:23, lineHeight:1, color:following?'#ff2d55':'#fff', fontFamily:HELV, filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.75))' }}>{following?'✓':'+'}</span>
+          <span style={{ fontFamily:IMP, fontSize:9, color:'#fff', textShadow:'0 1px 7px rgba(0,0,0,0.95)', letterSpacing:0.5 }}>{following?'FOLLOWING':'FOLLOW'}</span>
         </button>
       </div>
     </div>
@@ -1186,7 +1185,7 @@ function FeaturedRail({ items, counts, onView, onLove, onShare }) {
       pos = el.scrollWidth / 3; el.scrollLeft = pos;
       const step = () => {
         if (pause.current) { pos = el.scrollLeft; }
-        else { pos += 0.55; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
+        else { pos += 1.2; if (pos >= (el.scrollWidth * 2) / 3) pos -= el.scrollWidth / 3; el.scrollLeft = pos; }
         raf = requestAnimationFrame(step);
       };
       raf = requestAnimationFrame(step);
@@ -1216,7 +1215,7 @@ function GalleryHero({ items, onOpen }) {
       {items.map((it, i) => (
         <div key={it.id} aria-hidden={i!==idx} style={{ position:'absolute', inset:0, opacity:i===idx?1:0, transition:'opacity 1.2s ease' }}>
           <img src={it.src} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', filter:'blur(34px) brightness(0.42)', transform:'scale(1.18)' }} />
-          <img src={it.src} alt={it.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain' }} />
+          <img src={it.src} alt={it.title} style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain', filter:'brightness(1.1) saturate(1.05)' }} />
         </div>
       ))}
       <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, rgba(0,0,0,0.26) 0%, transparent 22%, transparent 54%, rgba(0,0,0,0.88) 100%)' }} />
@@ -1336,7 +1335,7 @@ function GuestPage({ setPage }) {
         <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, marginBottom:8, color:'#fff', textAlign:'center', paddingRight:'clamp(14px,3vw,40px)' }}>MOST LOVED</div>
         <FeaturedRail items={ranked} counts={counts} onView={setLightbox} onLove={onLove} onShare={onShare} />
       </div>
-      <div style={{ margin:'12px clamp(14px,3vw,40px) 0', border:'1px solid rgba(255,255,255,0.14)', padding:'clamp(22px,4vw,34px)', textAlign:'center', flexShrink:0, background:'repeating-linear-gradient(45deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 13px)' }}>
+      <div style={{ margin:'16px clamp(14px,3vw,40px) 0', padding:'clamp(18px,4vw,30px) 0', textAlign:'center', flexShrink:0 }}>
         <div style={{ fontFamily:HELV, fontSize:10, letterSpacing:4, color:'#8f8f8f', textTransform:'uppercase', marginBottom:8 }}>The contest</div>
         <div style={{ fontFamily:IMP, fontSize:'clamp(28px,8vw,46px)', color:'#fff', letterSpacing:1, lineHeight:0.96 }}>POST TO WIN</div>
         <div style={{ fontFamily:HELV, fontSize:13, color:'#9a9a9a', marginTop:10, maxWidth:420, marginLeft:'auto', marginRight:'auto', lineHeight:1.6 }}>Post your work. Collect love on the board. The most-loved pieces win.</div>
@@ -1796,6 +1795,21 @@ function ProfilePage({ setPage }) {
 }
 
 /* ══════════════════════════ NAVBAR ══════════════════════════ */
+/* Clean monochrome line icons for the footer — replaces the emoji for a high-end feel. */
+function NavIcon({ k, active }) {
+  const c = active ? '#fff' : 'rgba(255,255,255,0.9)';
+  const s = { fill:'none', stroke:c, strokeWidth:1.7, strokeLinecap:'round', strokeLinejoin:'round' };
+  const paths = {
+    guest: <g {...s}><rect x="3.5" y="4.5" width="17" height="15"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M4 18l5-5 3.5 3.5L16 13l4 4"/></g>,
+    photos: <g {...s}><rect x="3" y="7" width="18" height="12"/><path d="M8.5 7l1.6-2.5h3.8L15.5 7"/><circle cx="12" cy="13" r="3"/></g>,
+    leaderboard: <g {...s}><path d="M6 20v-7"/><path d="M12 20V4"/><path d="M18 20v-10"/></g>,
+    members: <g {...s}><circle cx="9" cy="8" r="3"/><path d="M3.5 19.5a5.5 5.5 0 0 1 11 0"/><path d="M16.5 6.2a3 3 0 0 1 0 5.6"/><path d="M18.5 19.5a5.2 5.2 0 0 0-2.6-4.3"/></g>,
+    studio: <g {...s}><path d="M5 21v-6"/><path d="M5 11V3"/><circle cx="5" cy="13" r="2"/><path d="M12 21v-9"/><path d="M12 8V3"/><circle cx="12" cy="10" r="2"/><path d="M19 21v-4"/><path d="M19 13V3"/><circle cx="19" cy="15" r="2"/></g>,
+    profile: <g {...s}><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></g>,
+  };
+  return <svg width="21" height="21" viewBox="0 0 24 24" aria-hidden="true">{paths[k]||paths.profile}</svg>;
+}
+
 function NavBar({ page, setPage }) {
   return (
     <div style={{
@@ -1817,14 +1831,14 @@ function NavBar({ page, setPage }) {
             {/* Pill wraps icon only — fixed 36×26 so active highlight is always the same size */}
             <span style={{
               display:'flex', alignItems:'center', justifyContent:'center',
-              width:36, height:26, borderRadius:0,
-              background:active?'rgba(255,255,255,0.14)':'transparent',
+              width:40, height:28, borderRadius:0,
+              background:active?'rgba(255,255,255,0.18)':'transparent',
               transition:'background 0.18s',
-              fontSize:16, lineHeight:1,
-            }}>{item.icon}</span>
+              lineHeight:1,
+            }}><NavIcon k={item.key} active={active} /></span>
             <span style={{
               fontFamily:IMP, fontSize:9, letterSpacing:'0.04em',
-              color:active?'#fff':'rgba(255,255,255,0.5)',
+              color:active?'#fff':'rgba(255,255,255,0.85)',
               transition:'color 0.18s', whiteSpace:'nowrap',
             }}>{item.label}</span>
           </button>
