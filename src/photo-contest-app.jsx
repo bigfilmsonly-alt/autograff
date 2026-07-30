@@ -1429,6 +1429,7 @@ function StudioPage({ setPage }) {
   const [recBeat,setRecBeat]=useState(null);   // { url, dataUrl } after a capture
   const [recName,setRecName]=useState('');
   const [savedMsg,setSavedMsg]=useState('');
+  const [micOn,setMicOn]=useState(false);
   const [swing,setSwing]=useState(0);
   const [patterns,setPatterns]=useState(()=>{const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));return p;});
   const [muted,setMuted]=useState({});
@@ -1441,6 +1442,7 @@ function StudioPage({ setPage }) {
   const [currentStep,setCurrentStep]=useState(-1);
   const ctxRef=useRef(null); const timerRef=useRef(null); const stepRef=useRef(0);
   const recRef=useRef(null); const chunksRef=useRef([]); const recDestRef=useRef(null);
+  const micStreamRef=useRef(null); const micSrcRef=useRef(null);
   const nextTimeRef=useRef(0); const bpmRef=useRef(bpm); const patRef=useRef(patterns);
   const mutRef=useRef(muted); const soloRef=useRef(solo); const volRef=useRef(volumes); const swingRef=useRef(swing);
   useEffect(()=>{bpmRef.current=bpm},[bpm]); useEffect(()=>{patRef.current=patterns},[patterns]);
@@ -1477,7 +1479,7 @@ function StudioPage({ setPage }) {
     schedule();
   };
   const stop=()=>{setPlaying(false);setCurrentStep(-1);if(timerRef.current)clearTimeout(timerRef.current);};
-  useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current);},[]);
+  useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current); try{micStreamRef.current&&micStreamRef.current.getTracks().forEach(t=>t.stop());}catch(_){}},[]);
   // Unlock audio on the very first touch anywhere in Studio (iOS), not only on Play.
   useEffect(()=>{ const h=()=>{try{unlock();}catch(_){}}; document.addEventListener('pointerdown',h,{once:true}); return()=>document.removeEventListener('pointerdown',h); },[]);
   const loadPreset=(name)=>{const pr=PRESETS[name];if(!pr)return;stop();
@@ -1490,11 +1492,20 @@ function StudioPage({ setPage }) {
     start(); // clicking a preset is a user gesture, so audio can start out loud
   };
   const clearAll=()=>{stop();setActivePreset(null);const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));setPatterns(p);};
-  // Record the live mix off the master node, then hand back a saveable audio clip.
+  // Turn the microphone on/off for vocal recording.
+  const toggleMic=async()=>{
+    if(micOn){ try{ micStreamRef.current&&micStreamRef.current.getTracks().forEach(t=>t.stop()); }catch(_){} micStreamRef.current=null; setMicOn(false); return; }
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+      micStreamRef.current=stream; setMicOn(true); setSavedMsg('Mic on — hit REC and sing over your beat.'); setTimeout(()=>setSavedMsg(''),3500);
+    }catch(_){ setSavedMsg('Microphone blocked. Allow mic access in your browser/site settings.'); }
+  };
+  // Record the live mix (+ vocals if the mic is on) off the master node.
   const startRecord=()=>{
     const ctx=unlock();
     if(typeof window==='undefined'||!window.MediaRecorder){ setSavedMsg('Recording is not supported on this browser.'); return; }
     const dest=ctx.createMediaStreamDestination(); ctx._master.connect(dest); recDestRef.current=dest;
+    if(micOn && micStreamRef.current){ try{ const ms=ctx.createMediaStreamSource(micStreamRef.current); ms.connect(dest); micSrcRef.current=ms; }catch(_){} }  // mic -> recorder only: no feedback
     const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'];
     const mime=types.find(t=>{try{return MediaRecorder.isTypeSupported(t);}catch(_){return false;}})||'';
     const rec=new MediaRecorder(dest.stream, mime?{mimeType:mime}:undefined);
@@ -1505,6 +1516,7 @@ function StudioPage({ setPage }) {
       const url=URL.createObjectURL(blob);
       const fr=new FileReader(); fr.onload=()=>setRecBeat({url,dataUrl:fr.result}); fr.readAsDataURL(blob);
       try{ ctx._master.disconnect(dest); }catch(_){}
+      try{ micSrcRef.current && micSrcRef.current.disconnect(); micSrcRef.current=null; }catch(_){}
     };
     recRef.current=rec; setRecBeat(null); setSavedMsg('');
     rec.start();
@@ -1547,7 +1559,7 @@ function StudioPage({ setPage }) {
           {recording && (
             <div style={{ display:'flex', alignItems:'center', gap:8, fontFamily:IMP, fontSize:12, letterSpacing:2, color:'#e0245e' }}>
               <span style={{ width:10, height:10, background:'#e0245e', display:'inline-block' }} />
-              RECORDING{'\u2026'} TAP STOP WHEN DONE
+              RECORDING{micOn?' \u00b7 VOCALS':''}{'\u2026'} TAP STOP WHEN DONE
             </div>
           )}
           {!recording && recBeat && (
@@ -1573,6 +1585,10 @@ function StudioPage({ setPage }) {
         <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff', marginLeft:6 }}>SWING</span>
         <input type="range" min="0" max="80" value={swing} onChange={e=>setSwing(Number(e.target.value))} style={{ width:60 }} />
         <span style={{ fontFamily:IMP, fontSize:11 }}>{swing}%</span>
+        <button onClick={toggleMic} title="Toggle microphone for vocals" style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:0, border:micOn?'none':'1px solid rgba(255,255,255,0.22)', background:micOn?'#e0245e':'transparent', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:1, cursor:'pointer' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+          {micOn?'VOCALS ON':'ADD VOCALS'}
+        </button>
       </div>
       {/* Genre presets — tap to load & auto-play out loud */}
       <div style={{ padding:'8px clamp(14px,3vw,40px)', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
