@@ -1464,6 +1464,20 @@ function buildMicFx(ctx, effect){
   return { input, output, cleanup };
 }
 
+/* A generated silent WAV played through an <audio> element unlocks iOS audio even when
+   the ring/silent switch is ON (it promotes the page's media session to "playback"). */
+let _silentUrl=null;
+function silentWavUrl(){
+  if(_silentUrl) return _silentUrl;
+  const sr=8000, n=Math.floor(sr*0.4), buf=new ArrayBuffer(44+n*2), dv=new DataView(buf);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF'); dv.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); dv.setUint32(16,16,true);
+  dv.setUint16(20,1,true); dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true);
+  dv.setUint16(32,2,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,n*2,true);
+  _silentUrl=URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+  return _silentUrl;
+}
+
 function StudioPage({ setPage }) {
   const [playing,setPlaying]=useState(false);
   const [bpm,setBpm]=useState(120);
@@ -1473,6 +1487,7 @@ function StudioPage({ setPage }) {
   const [savedMsg,setSavedMsg]=useState('');
   const [micOn,setMicOn]=useState(false);
   const [fx,setFx]=useState('clean');
+  const [layerCount,setLayerCount]=useState(0);
   const [swing,setSwing]=useState(0);
   const [patterns,setPatterns]=useState(()=>{const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));return p;});
   const [muted,setMuted]=useState({});
@@ -1486,6 +1501,7 @@ function StudioPage({ setPage }) {
   const ctxRef=useRef(null); const timerRef=useRef(null); const stepRef=useRef(0);
   const recRef=useRef(null); const chunksRef=useRef([]); const recDestRef=useRef(null);
   const micStreamRef=useRef(null); const micSrcRef=useRef(null); const micFxRef=useRef(null);
+  const vocalLayersRef=useRef([]); const layerSrcRef=useRef([]); const audioElRef=useRef(null);
   const nextTimeRef=useRef(0); const bpmRef=useRef(bpm); const patRef=useRef(patterns);
   const mutRef=useRef(muted); const soloRef=useRef(solo); const volRef=useRef(volumes); const swingRef=useRef(swing);
   useEffect(()=>{bpmRef.current=bpm},[bpm]); useEffect(()=>{patRef.current=patterns},[patterns]);
@@ -1499,11 +1515,14 @@ function StudioPage({ setPage }) {
     if(!ctx._master){ ctx._master=ctx.createGain(); ctx._master.connect(ctx.destination); }
     try{ if(ctx.state!=='running') ctx.resume(); }catch(_){}
     try{ const b=ctx.createBuffer(1,1,22050); const s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0); }catch(_){}
+    try{ if(!audioElRef.current){ const a=document.createElement('audio'); a.src=silentWavUrl(); a.loop=true; a.setAttribute('playsinline',''); a.playsInline=true; a.style.display='none'; document.body.appendChild(a); audioElRef.current=a; } audioElRef.current.play().catch(()=>{}); }catch(_){}
     return ctx;
   };
   const start=()=>{
     const ctx=unlock();
     stepRef.current=0; nextTimeRef.current=ctx.currentTime+0.05; setPlaying(true);
+    layerSrcRef.current.forEach(s=>{try{s.stop();}catch(_){}}); layerSrcRef.current=[];
+    vocalLayersRef.current.forEach(buf=>{ try{ const s=ctx.createBufferSource(); s.buffer=buf; s.connect(ctx._master); s.start(nextTimeRef.current); layerSrcRef.current.push(s); }catch(_){} });
     const schedule=()=>{
       while(nextTimeRef.current<ctxRef.current.currentTime+0.1){
         const step=stepRef.current; const sps=(60/bpmRef.current)/4;
@@ -1521,8 +1540,8 @@ function StudioPage({ setPage }) {
     };
     schedule();
   };
-  const stop=()=>{setPlaying(false);setCurrentStep(-1);if(timerRef.current)clearTimeout(timerRef.current);};
-  useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current); try{micStreamRef.current&&micStreamRef.current.getTracks().forEach(t=>t.stop());}catch(_){}},[]);
+  const stop=()=>{setPlaying(false);setCurrentStep(-1);if(timerRef.current)clearTimeout(timerRef.current); layerSrcRef.current.forEach(s=>{try{s.stop();}catch(_){}}); layerSrcRef.current=[];};
+  useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current); try{micStreamRef.current&&micStreamRef.current.getTracks().forEach(t=>t.stop());}catch(_){} try{if(audioElRef.current){audioElRef.current.pause();audioElRef.current.remove();}}catch(_){}},[]);
   // Unlock audio on the very first touch anywhere in Studio (iOS), not only on Play.
   useEffect(()=>{ const h=()=>{try{unlock();}catch(_){}}; document.addEventListener('pointerdown',h,{once:true}); return()=>document.removeEventListener('pointerdown',h); },[]);
   const loadPreset=(name)=>{const pr=PRESETS[name];if(!pr)return;stop();
@@ -1547,12 +1566,13 @@ function StudioPage({ setPage }) {
   const startRecord=()=>{
     const ctx=unlock();
     if(typeof window==='undefined'||!window.MediaRecorder){ setSavedMsg('Recording is not supported on this browser.'); return; }
-    const dest=ctx.createMediaStreamDestination(); ctx._master.connect(dest); recDestRef.current=dest;
+    const dest=ctx.createMediaStreamDestination(); recDestRef.current=dest;
+    if(!micOn) ctx._master.connect(dest);      // full mix (beat + any vocal layers) when not overdubbing
     if(micOn && micStreamRef.current){ try{
       const ms=ctx.createMediaStreamSource(micStreamRef.current); micSrcRef.current=ms;
       const chain=buildMicFx(ctx, fx); micFxRef.current=chain;
       ms.connect(chain.input);
-      chain.output.connect(dest);              // effected vocals into the recording
+      chain.output.connect(dest);              // ISOLATED effected vocal into the recording (for layering)
       chain.output.connect(ctx.destination);   // live monitor (best with headphones)
     }catch(_){} }
     const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'];
@@ -1563,7 +1583,7 @@ function StudioPage({ setPage }) {
     rec.onstop=()=>{
       const blob=new Blob(chunksRef.current,{type:mime||'audio/webm'});
       const url=URL.createObjectURL(blob);
-      const fr=new FileReader(); fr.onload=()=>setRecBeat({url,dataUrl:fr.result}); fr.readAsDataURL(blob);
+      const fr=new FileReader(); fr.onload=()=>setRecBeat({url,dataUrl:fr.result,blob}); fr.readAsDataURL(blob);
       try{ ctx._master.disconnect(dest); }catch(_){}
       try{ micSrcRef.current && micSrcRef.current.disconnect(); micSrcRef.current=null; }catch(_){}
       try{ if(micFxRef.current){ micFxRef.current.output.disconnect(); micFxRef.current.cleanup&&micFxRef.current.cleanup(); micFxRef.current=null; } }catch(_){}
@@ -1584,6 +1604,20 @@ function StudioPage({ setPage }) {
       setTimeout(()=>setSavedMsg(''), 4500);
     }catch(_){ setSavedMsg('Could not save — storage is full. Delete a beat and retry.'); }
   };
+  // Decode the captured vocal and lay it onto the beat as a synced layer.
+  const addToBeat=async()=>{
+    if(!recBeat||!recBeat.blob) return;
+    try{
+      const ctx=unlock();
+      const arr=await recBeat.blob.arrayBuffer();
+      const buf=await new Promise((res,rej)=>{ try{ ctx.decodeAudioData(arr, res, rej); }catch(e){ rej(e); } });
+      vocalLayersRef.current=[...vocalLayersRef.current, buf]; setLayerCount(vocalLayersRef.current.length);
+      setRecBeat(null); setRecName('');
+      try{ micStreamRef.current&&micStreamRef.current.getTracks().forEach(t=>t.stop()); }catch(_){} micStreamRef.current=null; setMicOn(false);
+      setSavedMsg('Vocal added to the beat — hit PLAY to hear it together.'); setTimeout(()=>setSavedMsg(''),4500);
+    }catch(_){ setSavedMsg('Could not add the vocal to the beat.'); }
+  };
+  const clearLayers=()=>{ layerSrcRef.current.forEach(s=>{try{s.stop();}catch(_){}}); layerSrcRef.current=[]; vocalLayersRef.current=[]; setLayerCount(0); };
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="STUDIO \u00B7 LOOP MIXER" right={
@@ -1604,7 +1638,7 @@ function StudioPage({ setPage }) {
           </button>
         </div>
       } />
-      {(recording || recBeat || savedMsg) && (
+      {(recording || recBeat || savedMsg || layerCount>0) && (
         <div style={{ padding:'10px clamp(14px,3vw,40px)', borderBottom:'1px solid rgba(255,255,255,0.1)', flexShrink:0 }}>
           {recording && (
             <div style={{ display:'flex', alignItems:'center', gap:8, fontFamily:IMP, fontSize:12, letterSpacing:2, color:'#e0245e' }}>
@@ -1614,16 +1648,23 @@ function StudioPage({ setPage }) {
           )}
           {!recording && recBeat && (
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:2, color:'#fff' }}>BEAT CAPTURED</div>
+              <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:2, color:'#fff' }}>CAPTURED {'—'} ADD IT TO THE BEAT, OR SAVE IT</div>
               <audio controls src={recBeat.url} style={{ width:'100%', height:36 }} />
               <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                <input value={recName} onChange={e=>setRecName(e.target.value)} placeholder="Name your beat" style={{ flex:'1 1 150px', minWidth:120, padding:'9px 12px', borderRadius:0, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:13, outline:'none', fontFamily:HELV }} />
-                <button onClick={saveBeat} style={{ background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'9px 20px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>SAVE TO PORTFOLIO</button>
-                <button onClick={()=>{ setRecBeat(null); setRecName(''); }} style={{ background:'none', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', borderRadius:0, padding:'9px 14px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>DISCARD</button>
+                <button onClick={addToBeat} style={{ background:'#e0245e', color:'#fff', border:'none', borderRadius:0, padding:'9px 18px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>ADD TO BEAT</button>
+                <input value={recName} onChange={e=>setRecName(e.target.value)} placeholder="Name it" style={{ flex:'1 1 110px', minWidth:100, padding:'9px 12px', borderRadius:0, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:13, outline:'none', fontFamily:HELV }} />
+                <button onClick={saveBeat} style={{ background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'9px 16px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>SAVE</button>
+                <button onClick={()=>{ setRecBeat(null); setRecName(''); }} style={{ background:'none', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', borderRadius:0, padding:'9px 12px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>DISCARD</button>
               </div>
             </div>
           )}
-          {savedMsg && <div style={{ fontFamily:HELV, fontSize:12, color:'#3ad07a', marginTop: (recording||recBeat)?6:0 }}>{savedMsg}</div>}
+          {layerCount>0 && !recording && !recBeat && (
+            <div style={{ display:'flex', alignItems:'center', gap:8, fontFamily:IMP, fontSize:11, letterSpacing:1, color:'#fff' }}>
+              <span style={{ color:'#e0245e' }}>{'♪'}</span>{layerCount} VOCAL LAYER{layerCount>1?'S':''} ON THE BEAT
+              <button onClick={clearLayers} style={{ marginLeft:6, background:'none', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', borderRadius:0, padding:'4px 10px', fontFamily:IMP, fontSize:9, letterSpacing:1, cursor:'pointer' }}>CLEAR</button>
+            </div>
+          )}
+          {savedMsg && <div style={{ fontFamily:HELV, fontSize:12, color:'#3ad07a', marginTop: (recording||recBeat||layerCount>0)?6:0 }}>{savedMsg}</div>}
         </div>
       )}
       {/* Transport */}
