@@ -1422,6 +1422,48 @@ function MembersPage({ setPage }) {
 }
 
 /* ── StudioPage ── */
+/* ── Vocal FX for the Studio mic — real Web Audio effect chains ── */
+function fxImpulse(ctx, dur, decay){
+  const rate=ctx.sampleRate, len=Math.max(1,Math.floor(rate*dur)), buf=ctx.createBuffer(2,len,rate);
+  for(let c=0;c<2;c++){ const d=buf.getChannelData(c); for(let i=0;i<len;i++){ d[i]=(Math.random()*2-1)*Math.pow(1-i/len, decay); } }
+  return buf;
+}
+function fxDistCurve(k){
+  const n=256, curve=new Float32Array(n);
+  for(let i=0;i<n;i++){ const x=i*2/n-1; curve[i]=(3+k)*x*0.7/(3+k*Math.abs(x)); }
+  return curve;
+}
+/* Returns {input, output, cleanup} for a mic effect. AUTOTUNE here is the produced/electronic
+   vocal *character* (bright + doubled + verb), not scale pitch-correction (that needs a pitch lib). */
+function buildMicFx(ctx, effect){
+  const input=ctx.createGain(), output=ctx.createGain(); let cleanup=null;
+  if(effect==='reverb'){
+    const conv=ctx.createConvolver(); conv.buffer=fxImpulse(ctx,1.8,2.5);
+    const wet=ctx.createGain(); wet.gain.value=0.6; const dry=ctx.createGain(); dry.gain.value=0.85;
+    input.connect(dry); dry.connect(output); input.connect(conv); conv.connect(wet); wet.connect(output);
+  } else if(effect==='echo'){
+    const d=ctx.createDelay(1.0); d.delayTime.value=0.28; const fb=ctx.createGain(); fb.gain.value=0.4; const wet=ctx.createGain(); wet.gain.value=0.55;
+    input.connect(output); input.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(output);
+  } else if(effect==='robot'){
+    const ring=ctx.createGain(); ring.gain.value=0; const osc=ctx.createOscillator(); osc.type='square'; osc.frequency.value=52; osc.connect(ring.gain); osc.start();
+    input.connect(ring); ring.connect(output); cleanup=()=>{try{osc.stop();}catch(_){}};
+  } else if(effect==='phone'){
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1500; bp.Q.value=6;
+    const dist=ctx.createWaveShaper(); dist.curve=fxDistCurve(10);
+    input.connect(bp); bp.connect(dist); dist.connect(output);
+  } else if(effect==='autotune'){
+    const hi=ctx.createBiquadFilter(); hi.type='highshelf'; hi.frequency.value=2600; hi.gain.value=8;
+    const d=ctx.createDelay(0.05); d.delayTime.value=0.018;
+    const lfo=ctx.createOscillator(); lfo.type='sine'; lfo.frequency.value=5.5; const lg=ctx.createGain(); lg.gain.value=0.006; lfo.connect(lg); lg.connect(d.delayTime); lfo.start();
+    const conv=ctx.createConvolver(); conv.buffer=fxImpulse(ctx,0.9,3); const wet=ctx.createGain(); wet.gain.value=0.32;
+    input.connect(hi); hi.connect(output); hi.connect(d); d.connect(output); hi.connect(conv); conv.connect(wet); wet.connect(output);
+    cleanup=()=>{try{lfo.stop();}catch(_){}};
+  } else {
+    input.connect(output); // clean
+  }
+  return { input, output, cleanup };
+}
+
 function StudioPage({ setPage }) {
   const [playing,setPlaying]=useState(false);
   const [bpm,setBpm]=useState(120);
@@ -1430,6 +1472,7 @@ function StudioPage({ setPage }) {
   const [recName,setRecName]=useState('');
   const [savedMsg,setSavedMsg]=useState('');
   const [micOn,setMicOn]=useState(false);
+  const [fx,setFx]=useState('clean');
   const [swing,setSwing]=useState(0);
   const [patterns,setPatterns]=useState(()=>{const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));return p;});
   const [muted,setMuted]=useState({});
@@ -1442,7 +1485,7 @@ function StudioPage({ setPage }) {
   const [currentStep,setCurrentStep]=useState(-1);
   const ctxRef=useRef(null); const timerRef=useRef(null); const stepRef=useRef(0);
   const recRef=useRef(null); const chunksRef=useRef([]); const recDestRef=useRef(null);
-  const micStreamRef=useRef(null); const micSrcRef=useRef(null);
+  const micStreamRef=useRef(null); const micSrcRef=useRef(null); const micFxRef=useRef(null);
   const nextTimeRef=useRef(0); const bpmRef=useRef(bpm); const patRef=useRef(patterns);
   const mutRef=useRef(muted); const soloRef=useRef(solo); const volRef=useRef(volumes); const swingRef=useRef(swing);
   useEffect(()=>{bpmRef.current=bpm},[bpm]); useEffect(()=>{patRef.current=patterns},[patterns]);
@@ -1505,7 +1548,13 @@ function StudioPage({ setPage }) {
     const ctx=unlock();
     if(typeof window==='undefined'||!window.MediaRecorder){ setSavedMsg('Recording is not supported on this browser.'); return; }
     const dest=ctx.createMediaStreamDestination(); ctx._master.connect(dest); recDestRef.current=dest;
-    if(micOn && micStreamRef.current){ try{ const ms=ctx.createMediaStreamSource(micStreamRef.current); ms.connect(dest); micSrcRef.current=ms; }catch(_){} }  // mic -> recorder only: no feedback
+    if(micOn && micStreamRef.current){ try{
+      const ms=ctx.createMediaStreamSource(micStreamRef.current); micSrcRef.current=ms;
+      const chain=buildMicFx(ctx, fx); micFxRef.current=chain;
+      ms.connect(chain.input);
+      chain.output.connect(dest);              // effected vocals into the recording
+      chain.output.connect(ctx.destination);   // live monitor (best with headphones)
+    }catch(_){} }
     const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'];
     const mime=types.find(t=>{try{return MediaRecorder.isTypeSupported(t);}catch(_){return false;}})||'';
     const rec=new MediaRecorder(dest.stream, mime?{mimeType:mime}:undefined);
@@ -1517,6 +1566,7 @@ function StudioPage({ setPage }) {
       const fr=new FileReader(); fr.onload=()=>setRecBeat({url,dataUrl:fr.result}); fr.readAsDataURL(blob);
       try{ ctx._master.disconnect(dest); }catch(_){}
       try{ micSrcRef.current && micSrcRef.current.disconnect(); micSrcRef.current=null; }catch(_){}
+      try{ if(micFxRef.current){ micFxRef.current.output.disconnect(); micFxRef.current.cleanup&&micFxRef.current.cleanup(); micFxRef.current=null; } }catch(_){}
     };
     recRef.current=rec; setRecBeat(null); setSavedMsg('');
     rec.start();
@@ -1590,11 +1640,23 @@ function StudioPage({ setPage }) {
           {micOn?'VOCALS ON':'ADD VOCALS'}
         </button>
       </div>
+      {micOn && (
+        <div style={{ padding:'8px clamp(14px,3vw,40px)', display:'flex', alignItems:'center', gap:6, flexShrink:0, flexWrap:'wrap', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
+          <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#e0245e', marginRight:2 }}>VOICE FX</span>
+          {[['clean','CLEAN'],['autotune','AUTO-TUNE'],['reverb','REVERB'],['echo','ECHO'],['robot','ROBOT'],['phone','PHONE']].map(([k,l])=>(
+            <button key={k} onClick={()=>setFx(k)} style={{
+              padding:'6px 11px', borderRadius:0, cursor:'pointer',
+              border:fx===k?'none':'1px solid rgba(255,255,255,0.2)', background:fx===k?'#fff':'transparent',
+              color:fx===k?'#000':'#fff', fontFamily:IMP, fontSize:10, letterSpacing:1 }}>{l}</button>
+          ))}
+          <span style={{ fontFamily:HELV, fontSize:10, color:'#8f8f8f', width:'100%', marginTop:2 }}>Baked into your recording. Use headphones to hear it live without feedback.</span>
+        </div>
+      )}
       {/* Genre presets — tap to load & auto-play out loud */}
       <div style={{ padding:'8px clamp(14px,3vw,40px)', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
           <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff' }}>{'\uD83C\uDFB5'} GENRE PRESETS</span>
-          <span style={{ fontSize:9, color:'#fff', letterSpacing:1 }}>Tap a genre — it plays instantly {'\u25B6'}</span>
+          <a href="https://suno.com" target="_blank" rel="noopener noreferrer" style={{ display:"flex", alignItems:"center", gap:5, textDecoration:"none", flexShrink:0, padding:"6px 11px", border:"1px solid rgba(255,255,255,0.25)", background:"transparent", color:"#fff", fontFamily:IMP, fontSize:10, letterSpacing:1, whiteSpace:"nowrap" }}>TAKE IT TO SUNO {"↗"}</a>
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2 }}>
           {Object.keys(PRESETS).map(n=>{
