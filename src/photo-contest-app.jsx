@@ -1469,13 +1469,19 @@ function buildMicFx(ctx, effect){
 let _silentUrl=null;
 function silentWavUrl(){
   if(_silentUrl) return _silentUrl;
-  const sr=8000, n=Math.floor(sr*0.4), buf=new ArrayBuffer(44+n*2), dv=new DataView(buf);
+  const sr=8000, n=Math.floor(sr*1.0), buf=new ArrayBuffer(44+n*2), dv=new DataView(buf);
   const w=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
   w(0,'RIFF'); dv.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); dv.setUint32(16,16,true);
   dv.setUint16(20,1,true); dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true);
   dv.setUint16(32,2,true); dv.setUint16(34,16,true); w(36,'data'); dv.setUint32(40,n*2,true);
   _silentUrl=URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
   return _silentUrl;
+}
+
+/* Official iOS 16.4+ API — tells Safari to play through the ring/silent switch.
+   Safe no-op on browsers/versions that don't support it. */
+function primeAudioSession(){
+  try{ if(navigator.audioSession && navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(_){}
 }
 
 function StudioPage({ setPage }) {
@@ -1510,17 +1516,26 @@ function StudioPage({ setPage }) {
   // iOS keeps the AudioContext silent until it's resumed AND a buffer is played
   // inside a real user gesture — resume() alone is not enough on iPhone.
   const unlock=()=>{
+    primeAudioSession();                                       // official mute-switch bypass (iOS 16.4+)
     if(!ctxRef.current) ctxRef.current=new(window.AudioContext||window.webkitAudioContext)();
     const ctx=ctxRef.current;
     if(!ctx._master){ ctx._master=ctx.createGain(); ctx._master.connect(ctx.destination); }
-    try{ if(ctx.state!=='running') ctx.resume(); }catch(_){}
+    try{ if(ctx.state!=='running') ctx.resume(); }catch(_){}   // covers 'suspended' AND iOS 'interrupted'
     try{ const b=ctx.createBuffer(1,1,22050); const s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0); }catch(_){}
-    try{ if(!audioElRef.current){ const a=document.createElement('audio'); a.src=silentWavUrl(); a.loop=true; a.setAttribute('playsinline',''); a.playsInline=true; a.style.display='none'; document.body.appendChild(a); audioElRef.current=a; } audioElRef.current.play().catch(()=>{}); }catch(_){}
+    try{
+      if(!audioElRef.current){
+        const a=document.createElement('audio');
+        a.src=silentWavUrl(); a.loop=true; a.setAttribute('playsinline',''); a.setAttribute('webkit-playsinline',''); a.playsInline=true; a.style.display='none';
+        a.addEventListener('pause',()=>{ try{a.play().catch(()=>{});}catch(_){} });  // keep media session in 'playback' (fallback for older iOS)
+        document.body.appendChild(a); audioElRef.current=a;
+      }
+      if(audioElRef.current.paused) audioElRef.current.play().catch(()=>{});
+    }catch(_){}
     return ctx;
   };
   const start=()=>{
     const ctx=unlock();
-    stepRef.current=0; nextTimeRef.current=ctx.currentTime+0.05; setPlaying(true);
+    stepRef.current=0; nextTimeRef.current=ctx.currentTime+0.12; setPlaying(true);
     layerSrcRef.current.forEach(s=>{try{s.stop();}catch(_){}}); layerSrcRef.current=[];
     vocalLayersRef.current.forEach(buf=>{ try{ const s=ctx.createBufferSource(); s.buffer=buf; s.connect(ctx._master); s.start(nextTimeRef.current); layerSrcRef.current.push(s); }catch(_){} });
     const schedule=()=>{
@@ -1544,6 +1559,8 @@ function StudioPage({ setPage }) {
   useEffect(()=>()=>{if(timerRef.current)clearTimeout(timerRef.current); try{micStreamRef.current&&micStreamRef.current.getTracks().forEach(t=>t.stop());}catch(_){} try{if(audioElRef.current){audioElRef.current.pause();audioElRef.current.remove();}}catch(_){}},[]);
   // Unlock audio on the very first touch anywhere in Studio (iOS), not only on Play.
   useEffect(()=>{ const h=()=>{try{unlock();}catch(_){}}; document.addEventListener('pointerdown',h,{once:true}); return()=>document.removeEventListener('pointerdown',h); },[]);
+  // iOS suspends/interrupts audio when the tab backgrounds or a call comes in — re-prime + resume on return.
+  useEffect(()=>{ const onVis=()=>{ if(document.visibilityState!=='visible')return; primeAudioSession(); const ctx=ctxRef.current; if(ctx&&ctx.state!=='running'){try{ctx.resume();}catch(_){}} const a=audioElRef.current; if(a&&a.paused){try{a.play().catch(()=>{});}catch(_){}} }; document.addEventListener('visibilitychange',onVis); return()=>document.removeEventListener('visibilitychange',onVis); },[]);
   const loadPreset=(name)=>{const pr=PRESETS[name];if(!pr)return;stop();
     const p={};TRACK_DEFS.forEach(t=>p[t.id]=(pr.patterns[t.id]||new Array(16).fill(0)).map(v=>!!v));
     // Sync refs synchronously so the scheduler plays the new beat immediately.
@@ -1697,7 +1714,6 @@ function StudioPage({ setPage }) {
       <div style={{ padding:'8px clamp(14px,3vw,40px)', flexShrink:0, borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
           <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff' }}>{'\uD83C\uDFB5'} GENRE PRESETS</span>
-          <a href="https://suno.com" target="_blank" rel="noopener noreferrer" style={{ display:"flex", alignItems:"center", gap:5, textDecoration:"none", flexShrink:0, padding:"6px 11px", border:"1px solid rgba(255,255,255,0.25)", background:"transparent", color:"#fff", fontFamily:IMP, fontSize:10, letterSpacing:1, whiteSpace:"nowrap" }}>TAKE IT TO SUNO {"↗"}</a>
         </div>
         <div style={{ display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none', paddingBottom:2 }}>
           {Object.keys(PRESETS).map(n=>{
