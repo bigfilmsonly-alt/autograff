@@ -207,7 +207,7 @@ function noise(ctx, dest, filterType, freq, q, time, attack, decay, peak) {
   src.connect(filt); filt.connect(g); src.start(time); src.stop(time + attack + decay + 0.02);
 }
 function playSound(ctx, track, time, vol) {
-  const out = ctx.destination;
+  const out = ctx._master || ctx.destination;   // _master lets us tap the mix for recording
   const v = (vol ?? 1) * (track.vol ?? 0.8);
   switch (track.sound) {
     case 'kick':
@@ -1425,6 +1425,10 @@ function MembersPage({ setPage }) {
 function StudioPage({ setPage }) {
   const [playing,setPlaying]=useState(false);
   const [bpm,setBpm]=useState(120);
+  const [recording,setRecording]=useState(false);
+  const [recBeat,setRecBeat]=useState(null);   // { url, dataUrl } after a capture
+  const [recName,setRecName]=useState('');
+  const [savedMsg,setSavedMsg]=useState('');
   const [swing,setSwing]=useState(0);
   const [patterns,setPatterns]=useState(()=>{const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));return p;});
   const [muted,setMuted]=useState({});
@@ -1436,6 +1440,7 @@ function StudioPage({ setPage }) {
   const [activePreset,setActivePreset]=useState(null);
   const [currentStep,setCurrentStep]=useState(-1);
   const ctxRef=useRef(null); const timerRef=useRef(null); const stepRef=useRef(0);
+  const recRef=useRef(null); const chunksRef=useRef([]); const recDestRef=useRef(null);
   const nextTimeRef=useRef(0); const bpmRef=useRef(bpm); const patRef=useRef(patterns);
   const mutRef=useRef(muted); const soloRef=useRef(solo); const volRef=useRef(volumes); const swingRef=useRef(swing);
   useEffect(()=>{bpmRef.current=bpm},[bpm]); useEffect(()=>{patRef.current=patterns},[patterns]);
@@ -1446,6 +1451,7 @@ function StudioPage({ setPage }) {
   const unlock=()=>{
     if(!ctxRef.current) ctxRef.current=new(window.AudioContext||window.webkitAudioContext)();
     const ctx=ctxRef.current;
+    if(!ctx._master){ ctx._master=ctx.createGain(); ctx._master.connect(ctx.destination); }
     try{ if(ctx.state!=='running') ctx.resume(); }catch(_){}
     try{ const b=ctx.createBuffer(1,1,22050); const s=ctx.createBufferSource(); s.buffer=b; s.connect(ctx.destination); s.start(0); }catch(_){}
     return ctx;
@@ -1484,20 +1490,80 @@ function StudioPage({ setPage }) {
     start(); // clicking a preset is a user gesture, so audio can start out loud
   };
   const clearAll=()=>{stop();setActivePreset(null);const p={};TRACK_DEFS.forEach(t=>p[t.id]=new Array(16).fill(false));setPatterns(p);};
+  // Record the live mix off the master node, then hand back a saveable audio clip.
+  const startRecord=()=>{
+    const ctx=unlock();
+    if(typeof window==='undefined'||!window.MediaRecorder){ setSavedMsg('Recording is not supported on this browser.'); return; }
+    const dest=ctx.createMediaStreamDestination(); ctx._master.connect(dest); recDestRef.current=dest;
+    const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/aac'];
+    const mime=types.find(t=>{try{return MediaRecorder.isTypeSupported(t);}catch(_){return false;}})||'';
+    const rec=new MediaRecorder(dest.stream, mime?{mimeType:mime}:undefined);
+    chunksRef.current=[];
+    rec.ondataavailable=(e)=>{ if(e.data&&e.data.size) chunksRef.current.push(e.data); };
+    rec.onstop=()=>{
+      const blob=new Blob(chunksRef.current,{type:mime||'audio/webm'});
+      const url=URL.createObjectURL(blob);
+      const fr=new FileReader(); fr.onload=()=>setRecBeat({url,dataUrl:fr.result}); fr.readAsDataURL(blob);
+      try{ ctx._master.disconnect(dest); }catch(_){}
+    };
+    recRef.current=rec; setRecBeat(null); setSavedMsg('');
+    rec.start();
+    setRecording(true);
+    if(!playing) start();   // make sure the beat is sounding so we capture it
+  };
+  const stopRecord=()=>{ try{ if(recRef.current&&recRef.current.state!=='inactive') recRef.current.stop(); }catch(_){} setRecording(false); };
+  const saveBeat=()=>{
+    if(!recBeat) return;
+    try{
+      const beats=JSON.parse(localStorage.getItem('autograff_beats')||'[]');
+      beats.unshift({ id:Date.now(), name:(recName||'').trim()||('Beat · '+bpm+' BPM'), bpm, audio:recBeat.dataUrl, ts:Date.now() });
+      localStorage.setItem('autograff_beats', JSON.stringify(beats.slice(0,40)));
+      setRecBeat(null); setRecName(''); setSavedMsg('Saved to your portfolio — see the YOU tab.');
+      setTimeout(()=>setSavedMsg(''), 4500);
+    }catch(_){ setSavedMsg('Could not save — storage is full. Delete a beat and retry.'); }
+  };
   return (
     <div style={{ width:'100%', height:'100%', display:'flex', flexDirection:'column', background:'#000' }}>
       <PageHeader setPage={setPage} subtitle="STUDIO \u00B7 LOOP MIXER" right={
-        <div style={{ display:'flex', gap:6 }}>
-          <button onClick={clearAll} style={{ padding:'8px 14px', borderRadius:0, border:'1px solid rgba(255,255,255,0.18)',
-            background:'#000', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer' }}>CLEAR</button>
-          <button onClick={playing?stop:start} style={{ padding:'8px clamp(14px,3vw,40px)', borderRadius:0, border:'none',
-            background:'rgba(255,255,255,0.14)', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:2, cursor:'pointer',
-            display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ color:'#4fc3f7', fontSize:14 }}>{playing?'\u23F9':'\u25B6'}</span>
+        <div style={{ display:'flex', gap:5 }}>
+          <button onClick={clearAll} style={{ padding:'8px 11px', borderRadius:0, border:'1px solid rgba(255,255,255,0.18)',
+            background:'#000', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:1, cursor:'pointer' }}>CLEAR</button>
+          <button onClick={recording?stopRecord:startRecord} style={{ padding:'8px 12px', borderRadius:0, border:'none',
+            background:recording?'#e0245e':'rgba(255,255,255,0.14)', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:1, cursor:'pointer',
+            display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:8, height:8, background:recording?'#fff':'#e0245e', display:'inline-block' }} />
+            {recording?'STOP':'REC'}
+          </button>
+          <button onClick={playing?stop:start} style={{ padding:'8px 16px', borderRadius:0, border:'none',
+            background:'rgba(255,255,255,0.14)', color:'#fff', fontFamily:IMP, fontSize:11, letterSpacing:1, cursor:'pointer',
+            display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ color:'#4fc3f7', fontSize:13 }}>{playing?'\u23F9':'\u25B6'}</span>
             {playing?'STOP':'PLAY'}
           </button>
         </div>
       } />
+      {(recording || recBeat || savedMsg) && (
+        <div style={{ padding:'10px clamp(14px,3vw,40px)', borderBottom:'1px solid rgba(255,255,255,0.1)', flexShrink:0 }}>
+          {recording && (
+            <div style={{ display:'flex', alignItems:'center', gap:8, fontFamily:IMP, fontSize:12, letterSpacing:2, color:'#e0245e' }}>
+              <span style={{ width:10, height:10, background:'#e0245e', display:'inline-block' }} />
+              RECORDING{'\u2026'} TAP STOP WHEN DONE
+            </div>
+          )}
+          {!recording && recBeat && (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ fontFamily:IMP, fontSize:12, letterSpacing:2, color:'#fff' }}>BEAT CAPTURED</div>
+              <audio controls src={recBeat.url} style={{ width:'100%', height:36 }} />
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                <input value={recName} onChange={e=>setRecName(e.target.value)} placeholder="Name your beat" style={{ flex:'1 1 150px', minWidth:120, padding:'9px 12px', borderRadius:0, border:'1px solid rgba(255,255,255,0.2)', background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:13, outline:'none', fontFamily:HELV }} />
+                <button onClick={saveBeat} style={{ background:'#fff', color:'#000', border:'none', borderRadius:0, padding:'9px 20px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>SAVE TO PORTFOLIO</button>
+                <button onClick={()=>{ setRecBeat(null); setRecName(''); }} style={{ background:'none', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', borderRadius:0, padding:'9px 14px', fontFamily:IMP, fontSize:12, letterSpacing:1, cursor:'pointer' }}>DISCARD</button>
+              </div>
+            </div>
+          )}
+          {savedMsg && <div style={{ fontFamily:HELV, fontSize:12, color:'#3ad07a', marginTop: (recording||recBeat)?6:0 }}>{savedMsg}</div>}
+        </div>
+      )}
       {/* Transport */}
       <div style={{ padding:'8px clamp(14px,3vw,40px)', display:'flex', alignItems:'center', gap:8, flexShrink:0, flexWrap:'wrap', borderBottom:'1px solid rgba(255,255,255,0.1)' }}>
         <span style={{ fontFamily:IMP, fontSize:10, letterSpacing:2, color:'#fff' }}>BPM</span>
@@ -1641,6 +1707,8 @@ function LoginSetup({ onDone, setPage }) {
 function ProfilePage({ setPage }) {
   const [member,setMember]=useState(()=>{ try { return JSON.parse(localStorage.getItem('autograff_member')||'null'); } catch(_) { return null; } });
   const [avatar,setAvatar]=useState(null);
+  const [beats,setBeats]=useState(()=>{ try { return JSON.parse(localStorage.getItem('autograff_beats')||'[]'); } catch(_) { return []; } });
+  const delBeat=(id)=>{ setBeats(prev=>{ const next=prev.filter(b=>b.id!==id); try{ localStorage.setItem('autograff_beats', JSON.stringify(next)); }catch(_){} return next; }); };
   const [username,setUsername]=useState('your_tag');
   const [editingName,setEditingName]=useState(false);
   const [uploads,setUploads]=useState([]);
@@ -1720,6 +1788,28 @@ function ProfilePage({ setPage }) {
         </div>
         <div style={{ height:4, background:'rgba(255,255,255,0.1)', borderRadius:0, marginBottom:18, overflow:'hidden' }}>
           <div style={{ height:'100%', background:'#fff', borderRadius:0, width:`${progress}%`, transition:'width 0.3s' }} />
+        </div>
+        {/* My beats — recorded in Studio, saved to the portfolio */}
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <span style={{ fontFamily:IMP, fontSize:12, letterSpacing:3, color:'#fff' }}>MY BEATS</span>
+            <button onClick={()=>setPage('studio')} style={{ background:'none', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', borderRadius:0, padding:'6px 12px', fontFamily:IMP, fontSize:10, letterSpacing:1, cursor:'pointer' }}>+ MAKE A BEAT</button>
+          </div>
+          {beats.length===0 ? (
+            <div style={{ fontFamily:HELV, fontSize:12, color:'#8f8f8f', padding:'12px 0', lineHeight:1.5 }}>No beats yet. Open Studio, build a loop, hit REC, then SAVE TO PORTFOLIO.</div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {beats.map(b=>(
+                <div key={b.id} style={{ border:'1px solid rgba(255,255,255,0.12)', padding:'10px 12px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                    <div style={{ fontFamily:IMP, fontSize:13, color:'#fff' }}>{b.name}<span style={{ fontFamily:HELV, fontSize:10, color:'#8f8f8f', marginLeft:8, letterSpacing:1 }}>{b.bpm} BPM</span></div>
+                    <button onClick={()=>delBeat(b.id)} title="Delete" style={{ background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:14, cursor:'pointer' }}>{'✕'}</button>
+                  </div>
+                  <audio controls src={b.audio} style={{ width:'100%', height:34 }} />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {/* Tabs + upload */}
         <div style={{ display:'flex', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.1)', marginBottom:16 }}>
